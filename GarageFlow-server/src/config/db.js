@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
+// Load environment variables from .env
 dotenv.config();
 
 export const db = await mysql.createPool({

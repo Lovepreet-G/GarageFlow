@@ -1,38 +1,59 @@
-import { db } from '../config/db.js';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import pool from '../config/db.js'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 export const registerShop = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { shop_name, shop_address, shop_phone, shop_email, password, tax_id } = req.body
 
-   if (!name || !email || !password) {
-    return res.status(400).json({ message: "Missing required fields" });
+  try {
+    const [exists] = await pool.query(
+      'SELECT id FROM shops WHERE shop_email = ?',
+      [shop_email]
+    )
+
+    if (exists.length)
+      return res.status(400).json({ message: 'Email already registered' })
+
+    const hash = await bcrypt.hash(password, 10)
+
+    await pool.query(
+      `INSERT INTO shops (shop_name, shop_address, shop_phone, shop_email, password_hash, tax_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [shop_name, shop_address, shop_phone, shop_email, hash, tax_id]
+    )
+
+    res.status(201).json({ message: 'Shop registered successfully' })
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
   }
-  const hash = await bcrypt.hash(password, 10);
-
-
-  await db.query(
-    'INSERT INTO shops (name, email, password_hash) VALUES (?, ?, ?)',
-    [name, email, hash]
-  );
-
-  res.json({ message: 'Shop registered' });
-  res.send('GarageFlow API is running 🚗');
-};
+}
 
 export const loginShop = async (req, res) => {
-  const { email, password } = req.body;
+  const { shop_email, password } = req.body
 
-  const [rows] = await db.query('SELECT * FROM shops WHERE email = ?', [email]);
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM shops WHERE shop_email = ?',
+      [shop_email]
+    )
 
-  if (!rows.length) return res.status(401).json({ message: 'Invalid login' });
+    if (!rows.length)
+      return res.status(401).json({ message: 'Invalid credentials' })
 
-  const shop = rows[0];
-  const valid = await bcrypt.compare(password, shop.password_hash);
+    const shop = rows[0]
 
-  if (!valid) return res.status(401).json({ message: 'Invalid login' });
+    const match = await bcrypt.compare(password, shop.password_hash)
+    if (!match)
+      return res.status(401).json({ message: 'Invalid credentials' })
 
-  const token = jwt.sign({ shopId: shop.id }, process.env.JWT_SECRET);
+    const token = jwt.sign(
+      { id: shop.id, shop_name: shop.shop_name },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    )
 
-  res.json({ token });
-};
+    res.json({ token, shop: { id: shop.id, shop_name: shop.shop_name } })
+  } catch {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
