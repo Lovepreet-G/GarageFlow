@@ -57,3 +57,7 @@ export const loginShop = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
+export const me = async (req, res) => {
+  // req.shop comes from middleware
+  res.json({ shop: req.shop })
+}
