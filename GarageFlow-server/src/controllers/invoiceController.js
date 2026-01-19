@@ -164,25 +164,30 @@ export const createInvoice = async (req, res) => {
   try {
     await conn.beginTransaction()
 
-    // Ensure customer exists
+    // Ensure customer belongs to logged-in shop
     const [custRows] = await conn.query(
-      "SELECT id FROM customers WHERE id = ?",
-      [customer_id]
+        "SELECT id FROM customers WHERE id = ? AND shop_id = ?",
+        [customer_id, shopId]
     )
+
     if (!custRows.length) {
-      await conn.rollback()
-      return res.status(400).json({ message: "Customer not found" })
+        await conn.rollback()
+        return res.status(400).json({ message: "Customer not found" })
     }
 
-    // Ensure vehicle belongs to customer
+    // Ensure vehicle belongs to same shop AND customer
     const [vehRows] = await conn.query(
-      "SELECT id FROM vehicles WHERE id = ? AND customer_id = ?",
-      [vehicle_id, customer_id]
+        "SELECT id FROM vehicles WHERE id = ? AND customer_id = ? AND shop_id = ?",
+        [vehicle_id, customer_id, shopId]
     )
+
     if (!vehRows.length) {
-      await conn.rollback()
-      return res.status(400).json({ message: "Vehicle not found for this customer" })
+        await conn.rollback()
+        return res.status(400).json({ message: "Vehicle not found for this customer" })
     }
+
+
+    
 
     // Insert invoice
     const [invResult] = await conn.query(

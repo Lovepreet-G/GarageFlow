@@ -103,9 +103,6 @@ function InvoiceView() {
                   <span className="font-semibold">Due:</span> {invoice.due_date}
                 </div>
               ) : null}
-              <div>
-                <span className="font-semibold">Status:</span> {invoice.status}
-              </div>
             </div>
           </div>
         </div>
