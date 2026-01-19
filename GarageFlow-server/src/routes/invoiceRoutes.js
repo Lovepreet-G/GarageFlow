@@ -10,7 +10,7 @@ import {
 const router = express.Router()
 
 // All invoice routes require login
-// router.use(requireAuth)
+router.use(requireAuth)
 
 // List + filters
 router.get("/", listInvoices)

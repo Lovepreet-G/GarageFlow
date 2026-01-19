@@ -10,6 +10,7 @@ import Home from './Pages/Home'
 import Invoices from './Pages/Invoices'
 import Customers from './Pages/Customers'
 import CreateInvoice from './Pages/CreateInvoice'
+import InvoiceView from "./pages/InvoiceView"
 
 function App() {
   const location = useLocation()
@@ -43,6 +44,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Invoices />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoices/:id"
+              element={
+                <ProtectedRoute>
+                  <InvoiceView />
                 </ProtectedRoute>
               }
             />
