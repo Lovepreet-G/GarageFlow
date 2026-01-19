@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import Header from './Components/Header'
 import Footer from './Components/Footer'
 import Sidebar from './Components/Sidebar'
+import ProtectedRoute from "./Components/ProtectedRoute"
 
 import Login from './Pages/Login'
 import Register from './Pages/Register'
@@ -23,12 +24,46 @@ function App() {
 
         <main className="flex-1 p-6">
           <Routes>
-            <Route path="/" element={<Home />} />
+            {/* Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/create-invoice" element={<CreateInvoice />} />
+
+            {/* Protected */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/invoices"
+              element={
+                <ProtectedRoute>
+                  <Invoices />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/customers"
+              element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/create-invoice"
+              element={
+                <ProtectedRoute>
+                  <CreateInvoice />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </main>
       </div>
