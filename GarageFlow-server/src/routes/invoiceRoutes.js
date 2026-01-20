@@ -5,6 +5,7 @@ import {
   getInvoiceById,
   updateInvoiceStatus,
   createInvoice,
+    invoicePdf,
 } from "../controllers/invoiceController.js"
 
 const router = express.Router()
@@ -15,8 +16,12 @@ router.use(requireAuth)
 // List + filters
 router.get("/", listInvoices)
 
-// Single invoice for view/print
+// Single invoice for view
 router.get("/:id", getInvoiceById)
+
+// Single invoice for print
+router.get("/:id/pdf", invoicePdf)
+
 
 // Update status dropdown
 router.patch("/:id/status", updateInvoiceStatus)

@@ -9,6 +9,34 @@ function InvoiceView() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
 
+  const printInvoicePdf = async (id) => {
+  try {
+        const res = await api.get(`/invoices/${id}/pdf`, {
+        responseType: "blob", // ✅ REQUIRED
+        })
+
+        const blob = new Blob([res.data], { type: "application/pdf" })
+        const url = window.URL.createObjectURL(blob)
+
+        const printWindow = window.open(url, "_blank")
+        if (!printWindow) {
+        alert("Popup blocked. Please allow popups.")
+        return
+        }
+
+        // Wait for PDF to load, then print
+        printWindow.onload = () => {
+        printWindow.focus()
+        printWindow.print()
+        printWindow.onafterprint = () => printWindow.close()
+        }
+    } catch (e) {
+        console.error(e)
+        alert("Failed to print invoice")
+    }
+    }
+
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -41,13 +69,38 @@ function InvoiceView() {
         >
           ← Back
         </button>
+        <button
+            onClick={() => printInvoicePdf(id)}
+            className="px-4 py-2 rounded bg-slate-900 text-white hover:bg-slate-800"
+            >
+            Print
+        </button>
 
         <button
-          onClick={() => window.print()}
-          className="px-4 py-2 rounded bg-slate-900 text-white hover:bg-slate-800"
-        >
-          Print
+            onClick={async () => {
+                try {
+                    const token = localStorage.getItem("token")
+                    const res = await api.get(`/invoices/${id}/pdf`, {
+                responseType: "blob", // ✅ THIS IS THE KEY
+                })
+                const blob = new Blob([res.data], { type: "application/pdf" })
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = `${invoice.invoice_number}.pdf`
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+                window.URL.revokeObjectURL(url)
+                } catch {
+                    alert("Failed to download PDF")
+                }
+            }}
+            className="px-4 py-2 rounded border bg-white hover:bg-slate-50"
+            >
+                Download PDF
         </button>
+
       </div>
 
       {/* Printable Invoice */}
@@ -81,7 +134,7 @@ function InvoiceView() {
                 {invoice.shop_email ? `Email: ${invoice.shop_email}` : ""}
               </div>
               {invoice.tax_id ? (
-                <div className="text-sm text-slate-600">GST/HST: {invoice.tax_id}</div>
+                <div className="text-sm text-slate-600">GST No. : {invoice.tax_id}</div>
               ) : null}
             </div>
           </div>
@@ -185,25 +238,37 @@ function InvoiceView() {
         <div className="mt-5 flex justify-end">
           <div className="w-full max-w-sm border rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-600">Subtotal</span>
-              <span className="font-semibold">{money(invoice.subtotal_amount)}</span>
+                <span className="text-slate-600">Subtotal</span>
+                <span className="font-semibold">{money(invoice.subtotal_amount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">HST/GST</span>
-              <span className="font-semibold">{money(invoice.tax_amount)}</span>
+                <span className="text-slate-600">HST (7%)</span>
+                <span className="font-semibold">{money(invoice.hst_amount)}</span>
+            </div>
+            <div className="flex justify-between">
+                <span className="text-slate-600">PST (5%)</span>
+                <span className="font-semibold">{money(invoice.pst_amount)}</span>
             </div>
             <div className="flex justify-between text-base">
-              <span className="font-bold">Total</span>
-              <span className="font-bold">{money(invoice.total_amount)}</span>
+                <span className="font-bold">Total</span>
+                <span className="font-bold">{money(invoice.total_amount)}</span>
             </div>
+
           </div>
         </div>
 
         {/* Warranty */}
-        <div className="mt-5 text-sm text-slate-700">
+        {/* <div className="mt-5 text-sm text-slate-700">
           <span className="font-semibold">Warranty:</span>{" "}
           {invoice.warranty_statement || "90 days or 5,000 km"}
-        </div>
+        </div> */}
+        {invoice.note ? (
+            <div className="mt-5 text-sm text-slate-700">
+                <span className="font-semibold">Note:</span>
+                <div className="whitespace-pre-line mt-1">{invoice.note}</div>
+            </div>
+        ) : null}
+
 
         {/* Signatures */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">

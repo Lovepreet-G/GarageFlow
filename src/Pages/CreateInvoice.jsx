@@ -3,164 +3,172 @@ import { useNavigate } from "react-router-dom"
 import api from "../api"
 
 function CreateInvoice() {
-  const navigate = useNavigate()
+    const navigate = useNavigate()
 
-  // customer search + select
-  const [customerQ, setCustomerQ] = useState("")
-  const [customers, setCustomers] = useState([])
-  const [customerId, setCustomerId] = useState("")
+    const [includePST, setIncludePST] = useState(true) // default checked
+    const [note, setNote] = useState("")
 
-  // new customer form
-  const [newCustomer, setNewCustomer] = useState({
-    customer_name: "",
-    customer_phone: "",
-    customer_email: "",
-    customer_address: "",
-  })
+    // customer search + select
+    const [customerQ, setCustomerQ] = useState("")
+    const [customers, setCustomers] = useState([])
+    const [customerId, setCustomerId] = useState("")
 
-  // vehicles for selected customer
-  const [vehicles, setVehicles] = useState([])
-  const [vehicleId, setVehicleId] = useState("")
-  const [newVehicle, setNewVehicle] = useState({
-    vehicle_vin: "",
-    make: "",
-    model: "",
-    year: "",
-    license_plate: "",
-  })
-
-  // invoice meta
-  const today = new Date().toISOString().slice(0, 10)
-  const [invoice_date, setInvoiceDate] = useState(today)
-  const [due_date, setDueDate] = useState("")
-  const [odometer_reading, setOdometer] = useState("")
-
-  // items
-  const [items, setItems] = useState([
-    { item_description: "", type: "Labor", condition: "", quantity: 1, unit_price: 0, total_price: 0 },
-  ])
-
-  // Load customers (search)
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      try {
-        const res = await api.get("/customers", { params: { q: customerQ } })
-        setCustomers(res.data || [])
-      } catch (e) {
-        // ignore
-      }
-    }, 300)
-    return () => clearTimeout(t)
-  }, [customerQ])
-
-  // Load vehicles when customer selected
-  useEffect(() => {
-    const loadVehicles = async () => {
-      if (!customerId) {
-        setVehicles([])
-        setVehicleId("")
-        return
-      }
-      const res = await api.get(`/customers/${customerId}/vehicles`)
-      setVehicles(res.data || [])
-      setVehicleId("")
-    }
-    loadVehicles()
-  }, [customerId])
-
-  const recalcItems = (next) => {
-    return next.map((it) => {
-      const qty = Number(it.quantity || 0)
-      const unit = Number(it.unit_price || 0)
-      return { ...it, total_price: Number((qty * unit).toFixed(2)) }
+    // new customer form
+    const [newCustomer, setNewCustomer] = useState({
+        customer_name: "",
+        customer_phone: "",
+        customer_email: "",
+        customer_address: "",
     })
-  }
 
-  const subtotal = useMemo(() => {
-    return recalcItems(items).reduce((sum, it) => sum + Number(it.total_price || 0), 0)
-  }, [items])
+    // vehicles for selected customer
+    const [vehicles, setVehicles] = useState([])
+    const [vehicleId, setVehicleId] = useState("")
+    const [newVehicle, setNewVehicle] = useState({
+        vehicle_vin: "",
+        make: "",
+        model: "",
+        year: "",
+        license_plate: "",
+    })
 
-  const tax = useMemo(() => Number((subtotal * 0.12).toFixed(2)), [subtotal])
-  const total = useMemo(() => Number((subtotal + tax).toFixed(2)), [subtotal, tax])
+    // invoice meta
+    const today = new Date().toISOString().slice(0, 10)
+    const [invoice_date, setInvoiceDate] = useState(today)
+    const [due_date, setDueDate] = useState("")
+    const [odometer_reading, setOdometer] = useState("")
 
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { item_description: "", type: "Labor", condition: "", quantity: 1, unit_price: 0, total_price: 0 },
+    // items
+    const [items, setItems] = useState([
+        { item_description: "", type: "Labor", condition: "", quantity: 1, unit_price: 0, total_price: 0 },
     ])
-  }
 
-  const removeItem = (idx) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx))
-  }
+    // Load customers (search)
+    useEffect(() => {
+        const t = setTimeout(async () => {
+        try {
+            const res = await api.get("/customers", { params: { q: customerQ } })
+            setCustomers(res.data || [])
+        } catch (e) {
+            // ignore
+        }
+        }, 300)
+        return () => clearTimeout(t)
+    }, [customerQ])
 
-  const updateItem = (idx, field, value) => {
-    setItems((prev) => {
-      const next = prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it))
-      return recalcItems(next)
-    })
-  }
+    // Load vehicles when customer selected
+    useEffect(() => {
+        const loadVehicles = async () => {
+        if (!customerId) {
+            setVehicles([])
+            setVehicleId("")
+            return
+        }
+        const res = await api.get(`/customers/${customerId}/vehicles`)
+        setVehicles(res.data || [])
+        setVehicleId("")
+        }
+        loadVehicles()
+    }, [customerId])
 
-  const createCustomer = async () => {
-    const res = await api.post("/customers", newCustomer)
-    setCustomerId(String(res.data.id))
-    alert("Customer created")
-  }
-
-  const createVehicle = async () => {
-    if (!customerId) return alert("Select a customer first")
-    const payload = {
-      customer_id: Number(customerId),
-      vehicle_vin: newVehicle.vehicle_vin,
-      make: newVehicle.make,
-      model: newVehicle.model,
-      year: newVehicle.year ? Number(newVehicle.year) : null,
-      license_plate: newVehicle.license_plate,
-    }
-    const res = await api.post("/vehicles", payload)
-    // reload vehicles
-    const v = await api.get(`/customers/${customerId}/vehicles`)
-    setVehicles(v.data || [])
-    setVehicleId(String(res.data.id))
-    alert("Vehicle created")
-  }
-
-  const saveInvoice = async () => {
-    if (!customerId) return alert("Select or create a customer")
-    if (!vehicleId) return alert("Select or create a vehicle")
-
-    // validate items
-    if (items.some((it) => !it.item_description || Number(it.quantity) <= 0)) {
-      return alert("Please fill item description and quantity")
+    const recalcItems = (next) => {
+        return next.map((it) => {
+        const qty = Number(it.quantity || 0)
+        const unit = Number(it.unit_price || 0)
+        return { ...it, total_price: Number((qty * unit).toFixed(2)) }
+        })
     }
 
-    const payload = {
-      customer_id: Number(customerId),
-      vehicle_id: Number(vehicleId),
-      invoice_date,
-      due_date: due_date || null,
-      odometer_reading: odometer_reading ? Number(odometer_reading) : null,
-      subtotal_amount: Number(subtotal.toFixed(2)),
-      tax_amount: Number(tax.toFixed(2)),
-      total_amount: Number(total.toFixed(2)),
-      status: "Draft",
-      items: items.map((it) => ({
-        item_description: it.item_description,
-        type: it.type,
-        condition: it.type === "Part" ? (it.condition || null) : null,
-        quantity: Number(it.quantity),
-        unit_price: Number(it.unit_price),
-        total_price: Number(it.total_price),
-      })),
+    const subtotal = useMemo(() => {
+        return recalcItems(items).reduce((sum, it) => sum + Number(it.total_price || 0), 0)
+    }, [items])
+
+    const hst = useMemo(() => Number((subtotal * 0.07).toFixed(2)), [subtotal])
+    const pst = useMemo(() => (includePST ? Number((subtotal * 0.05).toFixed(2)) : 0), [subtotal, includePST])
+    const tax = useMemo(() => Number((hst + pst).toFixed(2)), [hst, pst])
+    const total = useMemo(() => Number((subtotal + tax).toFixed(2)), [subtotal, tax])
+
+    const addItem = () => {
+        setItems((prev) => [
+        ...prev,
+        { item_description: "", type: "Labor", condition: "", quantity: 1, unit_price: 0, total_price: 0 },
+        ])
     }
 
-    try {
-      const res = await api.post("/invoices", payload)
-      navigate(`/invoices/${res.data.invoice_id}`)
-    } catch (e) {
-      alert(e.response?.data?.message || "Failed to save invoice")
+    const removeItem = (idx) => {
+        setItems((prev) => prev.filter((_, i) => i !== idx))
     }
-  }
+
+    const updateItem = (idx, field, value) => {
+        setItems((prev) => {
+        const next = prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it))
+        return recalcItems(next)
+        })
+    }
+
+    const createCustomer = async () => {
+        const res = await api.post("/customers", newCustomer)
+        setCustomerId(String(res.data.id))
+        alert("Customer created")
+    }
+
+    const createVehicle = async () => {
+        if (!customerId) return alert("Select a customer first")
+        const payload = {
+        customer_id: Number(customerId),
+        vehicle_vin: newVehicle.vehicle_vin,
+        make: newVehicle.make,
+        model: newVehicle.model,
+        year: newVehicle.year ? Number(newVehicle.year) : null,
+        license_plate: newVehicle.license_plate,
+        }
+        const res = await api.post("/vehicles", payload)
+        // reload vehicles
+        const v = await api.get(`/customers/${customerId}/vehicles`)
+        setVehicles(v.data || [])
+        setVehicleId(String(res.data.id))
+        alert("Vehicle created")
+    }
+
+    const saveInvoice = async () => {
+        if (!customerId) return alert("Select or create a customer")
+        if (!vehicleId) return alert("Select or create a vehicle")
+
+        // validate items
+        if (items.some((it) => !it.item_description || Number(it.quantity) <= 0)) {
+        return alert("Please fill item description and quantity")
+        }
+
+        const payload = {
+        customer_id: Number(customerId),
+        vehicle_id: Number(vehicleId),
+        invoice_date,
+        due_date: due_date || null,
+        odometer_reading: odometer_reading ? Number(odometer_reading) : null,
+        subtotal_amount: Number(subtotal.toFixed(2)),
+        hst_amount: Number(hst.toFixed(2)),
+        pst_amount: Number(pst.toFixed(2)),
+        tax_amount: Number(tax.toFixed(2)),
+        total_amount: Number(total.toFixed(2)),
+        note,
+        status: "Draft",
+        items: items.map((it) => ({
+            item_description: it.item_description,
+            type: it.type,
+            condition: it.type === "Part" ? (it.condition || null) : null,
+            quantity: Number(it.quantity),
+            unit_price: Number(it.unit_price),
+            total_price: Number(it.total_price),
+        })),
+        }
+
+        try {
+        const res = await api.post("/invoices", payload)
+        navigate(`/invoices/${res.data.invoice_id}`)
+        } catch (e) {
+        alert(e.response?.data?.message || "Failed to save invoice")
+        }
+    }
 
   return (
     <div className="space-y-5">
@@ -355,17 +363,35 @@ function CreateInvoice() {
         {/* Totals */}
         <div className="flex justify-end">
           <div className="w-full max-w-sm text-sm space-y-2 border rounded-lg p-4">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Subtotal</span>
-              <span className="font-semibold">${subtotal.toFixed(2)}</span>
+            <div className="flex items-center justify-between">
+                <span className="text-slate-600">HST (7%)</span>
+                <span className="font-semibold">${hst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">HST (12%)</span>
-              <span className="font-semibold">${tax.toFixed(2)}</span>
+
+            <div className="flex items-center justify-between">
+                <label className="text-slate-600 flex items-center gap-2">
+                    <input
+                    type="checkbox"
+                    checked={includePST}
+                    onChange={(e) => setIncludePST(e.target.checked)}
+                    />
+                    PST (5%)
+                </label>
+                <span className="font-semibold">${pst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-base">
-              <span className="font-bold">Total</span>
-              <span className="font-bold">${total.toFixed(2)}</span>
+
+            <div className="flex items-center justify-between text-base">
+                <span className="font-bold">Total</span>
+                <span className="font-bold">${total.toFixed(2)}</span>
+            </div>
+            <div className="bg-white border rounded-xl p-4">
+            <div className="font-semibold mb-2">Note</div>
+                <textarea
+                    className="border rounded px-3 py-2 w-full min-h-[90px]"
+                    placeholder="Write any note for the customer (appears on invoice)..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                />
             </div>
           </div>
         </div>
