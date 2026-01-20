@@ -9,42 +9,92 @@ function InvoiceView() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
 
-  const printInvoicePdf = async (id) => {
-  try {
-        const res = await api.get(`/invoices/${id}/pdf`, {
-        responseType: "blob", // ✅ REQUIRED
-        })
+  // no alerts: inline error messages
+  const [error, setError] = useState("")
+  const [printing, setPrinting] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
-        const blob = new Blob([res.data], { type: "application/pdf" })
-        const url = window.URL.createObjectURL(blob)
+  const money = (v) => `$${Number(v || 0).toFixed(2)}`
 
-        const printWindow = window.open(url, "_blank")
-        if (!printWindow) {
-        alert("Popup blocked. Please allow popups.")
+  const printInvoicePdf = async () => {
+    setError("")
+    setPrinting(true)
+    try {
+      const res = await api.get(`/invoices/${id}/pdf`, {
+        responseType: "blob",
+      })
+
+      const blob = new Blob([res.data], { type: "application/pdf" })
+      const url = window.URL.createObjectURL(blob)
+
+      const printWindow = window.open(url, "_blank")
+      if (!printWindow) {
+        setError("Popup blocked. Please allow popups to print the invoice.")
+        window.URL.revokeObjectURL(url)
         return
-        }
+      }
 
-        // Wait for PDF to load, then print
-        printWindow.onload = () => {
-        printWindow.focus()
-        printWindow.print()
-        printWindow.onafterprint = () => printWindow.close()
+      // Some browsers don't fire onload reliably for PDF.
+      // We'll attempt print after a short delay too.
+      const tryPrint = () => {
+        try {
+          printWindow.focus()
+          printWindow.print()
+          printWindow.onafterprint = () => {
+            printWindow.close()
+            window.URL.revokeObjectURL(url)
+          }
+        } catch {
+          // fallback: keep tab open
         }
+      }
+
+      printWindow.onload = tryPrint
+      setTimeout(tryPrint, 700)
     } catch (e) {
-        console.error(e)
-        alert("Failed to print invoice")
+      console.error(e)
+      setError(e.response?.data?.message || "Failed to print invoice.")
+    } finally {
+      setPrinting(false)
     }
-    }
+  }
 
+  const downloadInvoicePdf = async (invoiceNumber) => {
+    setError("")
+    setDownloading(true)
+    try {
+      const res = await api.get(`/invoices/${id}/pdf`, {
+        responseType: "blob",
+      })
+
+      const blob = new Blob([res.data], { type: "application/pdf" })
+      const url = window.URL.createObjectURL(blob)
+
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${invoiceNumber || `INV-${id}`}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      setError(e.response?.data?.message || "Failed to download PDF.")
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
+      setError("")
       try {
         const res = await api.get(`/invoices/${id}`)
         setData(res.data)
       } catch (err) {
-        alert(err.response?.data?.message || "Failed to load invoice")
-        navigate("/invoices")
+        setError(err.response?.data?.message || "Failed to load invoice.")
+        // redirect after a moment (optional). If you prefer instant redirect, tell me.
+        setTimeout(() => navigate("/invoices"), 600)
       } finally {
         setLoading(false)
       }
@@ -57,50 +107,51 @@ function InvoiceView() {
 
   const { invoice, items } = data
 
-  const money = (v) => `$${Number(v || 0).toFixed(2)}`
-
   return (
     <div className="space-y-4">
       {/* Top actions (hidden on print) */}
-      <div className="flex items-center justify-between no-print">
-        <button
-          onClick={() => navigate("/invoices")}
-          className="px-4 py-2 rounded border bg-white hover:bg-slate-50"
-        >
-          ← Back
-        </button>
-        <button
-            onClick={() => printInvoicePdf(id)}
-            className="px-4 py-2 rounded bg-slate-900 text-white hover:bg-slate-800"
-            >
-            Print
-        </button>
+      <div className="no-print">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <button
+            onClick={() => navigate("/invoices")}
+            className="px-4 py-2 rounded border bg-white hover:bg-slate-50 w-fit"
+          >
+            ← Back
+          </button>
 
-        <button
-            onClick={async () => {
-                try {
-                    const token = localStorage.getItem("token")
-                    const res = await api.get(`/invoices/${id}/pdf`, {
-                responseType: "blob", // ✅ THIS IS THE KEY
-                })
-                const blob = new Blob([res.data], { type: "application/pdf" })
-                const url = window.URL.createObjectURL(blob)
-                const a = document.createElement("a")
-                a.href = url
-                a.download = `${invoice.invoice_number}.pdf`
-                document.body.appendChild(a)
-                a.click()
-                a.remove()
-                window.URL.revokeObjectURL(url)
-                } catch {
-                    alert("Failed to download PDF")
-                }
-            }}
-            className="px-4 py-2 rounded border bg-white hover:bg-slate-50"
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={printInvoicePdf}
+              disabled={printing || downloading}
+              className={[
+                "px-4 py-2 rounded text-white",
+                printing || downloading
+                  ? "bg-slate-400 cursor-not-allowed"
+                  : "bg-slate-900 hover:bg-slate-800",
+              ].join(" ")}
             >
-                Download PDF
-        </button>
+              {printing ? "Printing..." : "Print"}
+            </button>
 
+            <button
+              onClick={() => downloadInvoicePdf(invoice.invoice_number)}
+              disabled={printing || downloading}
+              className={[
+                "px-4 py-2 rounded border bg-white",
+                printing || downloading ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50",
+              ].join(" ")}
+            >
+              {downloading ? "Downloading..." : "Download PDF"}
+            </button>
+          </div>
+        </div>
+
+        {/* Inline error */}
+        {error ? (
+          <div className="mt-3 text-sm text-red-600 bg-red-50 border rounded px-4 py-3">
+            {error}
+          </div>
+        ) : null}
       </div>
 
       {/* Printable Invoice */}
@@ -108,10 +159,9 @@ function InvoiceView() {
         {/* Shop header */}
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-4">
-            {/* Logo */}
             {invoice.logo_url ? (
               <img
-                src={invoice.logo_url}
+                src={"http://localhost:5000" + invoice.logo_url}
                 alt="Shop Logo"
                 className="w-20 h-20 object-contain border rounded"
               />
@@ -121,10 +171,9 @@ function InvoiceView() {
               </div>
             )}
 
+
             <div>
-              <div className="text-2xl font-bold leading-tight">
-                {invoice.shop_name}
-              </div>
+              <div className="text-2xl font-bold leading-tight">{invoice.shop_name}</div>
               <div className="text-sm text-slate-600 whitespace-pre-line">
                 {invoice.shop_address}
               </div>
@@ -142,14 +191,12 @@ function InvoiceView() {
           {/* Invoice meta */}
           <div className="text-right">
             <div className="text-3xl font-bold">INVOICE</div>
-            <div className="text-sm mt-1">
+            <div className="text-sm mt-1 space-y-1">
               <div>
-                <span className="font-semibold">Invoice #:</span>{" "}
-                {invoice.invoice_number}
+                <span className="font-semibold">Invoice #:</span> {invoice.invoice_number}
               </div>
               <div>
-                <span className="font-semibold">Date:</span>{" "}
-                {invoice.invoice_date}
+                <span className="font-semibold">Date:</span> {invoice.invoice_date}
               </div>
               {invoice.due_date ? (
                 <div>
@@ -195,12 +242,10 @@ function InvoiceView() {
                 <span className="font-semibold">Year:</span> {invoice.year || "-"}
               </div>
               <div>
-                <span className="font-semibold">Plate:</span>{" "}
-                {invoice.license_plate || "-"}
+                <span className="font-semibold">Plate:</span> {invoice.license_plate || "-"}
               </div>
               <div>
-                <span className="font-semibold">Odometer:</span>{" "}
-                {invoice.odometer_reading ?? "-"}
+                <span className="font-semibold">Odometer:</span> {invoice.odometer_reading ?? "-"}
               </div>
             </div>
           </div>
@@ -238,37 +283,31 @@ function InvoiceView() {
         <div className="mt-5 flex justify-end">
           <div className="w-full max-w-sm border rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold">{money(invoice.subtotal_amount)}</span>
+              <span className="text-slate-600">Subtotal</span>
+              <span className="font-semibold">{money(invoice.subtotal_amount)}</span>
             </div>
             <div className="flex justify-between">
-                <span className="text-slate-600">HST (7%)</span>
-                <span className="font-semibold">{money(invoice.hst_amount)}</span>
+              <span className="text-slate-600">HST (7%)</span>
+              <span className="font-semibold">{money(invoice.hst_amount)}</span>
             </div>
             <div className="flex justify-between">
-                <span className="text-slate-600">PST (5%)</span>
-                <span className="font-semibold">{money(invoice.pst_amount)}</span>
+              <span className="text-slate-600">PST (5%)</span>
+              <span className="font-semibold">{money(invoice.pst_amount)}</span>
             </div>
             <div className="flex justify-between text-base">
-                <span className="font-bold">Total</span>
-                <span className="font-bold">{money(invoice.total_amount)}</span>
+              <span className="font-bold">Total</span>
+              <span className="font-bold">{money(invoice.total_amount)}</span>
             </div>
-
           </div>
         </div>
 
-        {/* Warranty */}
-        {/* <div className="mt-5 text-sm text-slate-700">
-          <span className="font-semibold">Warranty:</span>{" "}
-          {invoice.warranty_statement || "90 days or 5,000 km"}
-        </div> */}
+        {/* Note */}
         {invoice.note ? (
-            <div className="mt-5 text-sm text-slate-700">
-                <span className="font-semibold">Note:</span>
-                <div className="whitespace-pre-line mt-1">{invoice.note}</div>
-            </div>
+          <div className="mt-5 text-sm text-slate-700">
+            <span className="font-semibold">Note:</span>
+            <div className="whitespace-pre-line mt-1">{invoice.note}</div>
+          </div>
         ) : null}
-
 
         {/* Signatures */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -286,10 +325,7 @@ function InvoiceView() {
           </div>
         </div>
 
-        {/* Footer note */}
-        <div className="mt-6 text-xs text-slate-500 text-center">
-          Powered by GarageFlow
-        </div>
+        <div className="mt-6 text-xs text-slate-500 text-center">Powered by GarageFlow</div>
       </div>
 
       {/* Print CSS */}

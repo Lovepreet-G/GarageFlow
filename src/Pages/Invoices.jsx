@@ -14,6 +14,10 @@ function Invoices() {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
 
+  // Inline errors (no alerts)
+  const [pageError, setPageError] = useState("")
+  const [rowErrors, setRowErrors] = useState({}) // { [invoiceId]: "message" }
+
   // Debounce search a bit
   const [debouncedQ, setDebouncedQ] = useState("")
   useEffect(() => {
@@ -22,14 +26,15 @@ function Invoices() {
   }, [q])
 
   const statusParam = useMemo(() => {
-    // backend supports exact statuses; for Unpaid we’ll fetch all then filter OR do no status param
+    // backend supports exact statuses; for Unpaid we fetch all then filter client-side
     if (activeTab === "Draft") return "Draft"
     if (activeTab === "Paid") return "Paid"
-    return "" // Unpaid: fetch all for shop + filter client-side to Approved/Overdue
+    return "" // Unpaid
   }, [activeTab])
 
   const fetchInvoices = async () => {
     setLoading(true)
+    setPageError("")
     try {
       const params = {}
       if (statusParam) params.status = statusParam
@@ -40,7 +45,7 @@ function Invoices() {
       const res = await api.get("/invoices", { params })
       setRows(res.data || [])
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to load invoices")
+      setPageError(err.response?.data?.message || "Failed to load invoices.")
     } finally {
       setLoading(false)
     }
@@ -56,15 +61,39 @@ function Invoices() {
     return rows.filter((r) => r.status === "Approved" || r.status === "Overdue")
   }, [rows, activeTab])
 
+  const clearRowError = (invoiceId) => {
+    setRowErrors((prev) => {
+      if (!prev[invoiceId]) return prev
+      const copy = { ...prev }
+      delete copy[invoiceId]
+      return copy
+    })
+  }
+
   const handleStatusChange = async (invoiceId, newStatus) => {
+    // optimistic UI update + rollback on error (better UX)
+    setPageError("")
+    clearRowError(invoiceId)
+
+    const prev = rows.find((r) => r.id === invoiceId)?.status
+
+    // update UI locally right away
+    setRows((prevRows) =>
+      prevRows.map((r) => (r.id === invoiceId ? { ...r, status: newStatus } : r))
+    )
+
     try {
       await api.patch(`/invoices/${invoiceId}/status`, { status: newStatus })
-      // Update UI locally (fast)
-      setRows((prev) =>
-        prev.map((r) => (r.id === invoiceId ? { ...r, status: newStatus } : r))
-      )
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update status")
+      const msg = err.response?.data?.message || "Failed to update status."
+
+      // rollback
+      setRows((prevRows) =>
+        prevRows.map((r) => (r.id === invoiceId ? { ...r, status: prev } : r))
+      )
+
+      // show error under dropdown for that row
+      setRowErrors((p) => ({ ...p, [invoiceId]: msg }))
     }
   }
 
@@ -77,7 +106,10 @@ function Invoices() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value)
+              setPageError("")
+            }}
             className="border rounded px-3 py-2 w-full sm:w-72"
             placeholder="Search: customer, VIN, invoice #"
           />
@@ -86,14 +118,20 @@ function Invoices() {
             <input
               type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => {
+                setFrom(e.target.value)
+                setPageError("")
+              }}
               className="border rounded px-3 py-2"
               title="From date"
             />
             <input
               type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => {
+                setTo(e.target.value)
+                setPageError("")
+              }}
               className="border rounded px-3 py-2"
               title="To date"
             />
@@ -106,7 +144,10 @@ function Invoices() {
         {["Draft", "Paid", "Unpaid"].map((t) => (
           <button
             key={t}
-            onClick={() => setActiveTab(t)}
+            onClick={() => {
+              setActiveTab(t)
+              setPageError("")
+            }}
             className={[
               "px-4 py-2 rounded border",
               activeTab === t
@@ -121,6 +162,13 @@ function Invoices() {
 
       {/* Table */}
       <div className="bg-white border rounded-xl overflow-hidden">
+        {/* Page-level error (no alert) */}
+        {pageError ? (
+          <div className="px-4 py-3 text-sm text-red-600 bg-red-50 border-b">
+            {pageError}
+          </div>
+        ) : null}
+
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-slate-50">
@@ -150,7 +198,7 @@ function Invoices() {
                 </tr>
               ) : (
                 filteredRows.map((inv, idx) => (
-                  <tr key={inv.id} className="border-t text-sm">
+                  <tr key={inv.id} className="border-t text-sm align-top">
                     <td className="p-3">{idx + 1}</td>
                     <td className="p-3">{inv.invoice_date}</td>
                     <td className="p-3">{inv.customer_name}</td>
@@ -161,17 +209,25 @@ function Invoices() {
 
                     <td className="p-3">
                       <select
-                        className="border rounded px-2 py-1"
+                        className={[
+                          "border rounded px-2 py-1 w-full",
+                          rowErrors[inv.id] ? "border-red-500" : "border-slate-300",
+                        ].join(" ")}
                         value={inv.status}
-                        onChange={(e) =>
-                          handleStatusChange(inv.id, e.target.value)
-                        }
+                        onChange={(e) => handleStatusChange(inv.id, e.target.value)}
+                        onFocus={() => clearRowError(inv.id)}
                       >
                         <option value="Draft">Draft</option>
                         <option value="Approved">Approved</option>
                         <option value="Paid">Paid</option>
                         <option value="Overdue">Overdue</option>
                       </select>
+
+                      {rowErrors[inv.id] ? (
+                        <div className="mt-1 text-xs text-red-600">
+                          {rowErrors[inv.id]}
+                        </div>
+                      ) : null}
                     </td>
 
                     <td className="p-3">

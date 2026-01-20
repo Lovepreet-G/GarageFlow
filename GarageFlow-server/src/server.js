@@ -19,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use("/uploads", express.static("uploads"))
 
 
 

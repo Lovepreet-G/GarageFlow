@@ -87,7 +87,7 @@ const invoiceHtml = ({ invoice, items }) => {
 <body>
   <div class="top">
     <div class="shop">
-      <div class="logoBox">${invoice.logo_url ? `<img src="${invoice.logo_url}" style="max-width:78px; max-height:78px; object-fit:contain;" />` : "Logo"}</div>
+      <div class="logoBox">${invoice.logo_url ? `<img src="${"http://localhost:5000" + invoice.logo_url}" style="max-width:78px; max-height:78px; object-fit:contain;" />` : "Logo"}</div>
       <div>
         <h1>${shopName}</h1>
         <div class="muted">${shopAddress}</div>
