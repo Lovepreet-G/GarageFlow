@@ -23,7 +23,11 @@ function App() {
       <div className="flex">
         {!noLayout && <Sidebar />}
 
-        <main className="flex-1 p-6">
+        <main
+            className={`flex-1 p-6 ${
+              noLayout ? "" : "ml-64 mt-16"
+            }`}
+        >
           <Routes>
             {/* Public */}
             <Route path="/login" element={<Login />} />
