@@ -129,16 +129,12 @@ function CreateInvoice() {
     if (!customerId) return alert("Select or create a customer")
     if (!vehicleId) return alert("Select or create a vehicle")
 
-    // simple invoice number generator (replace later)
-    const invoice_number = `INV-${Date.now()}`
-
     // validate items
     if (items.some((it) => !it.item_description || Number(it.quantity) <= 0)) {
       return alert("Please fill item description and quantity")
     }
 
     const payload = {
-      invoice_number,
       customer_id: Number(customerId),
       vehicle_id: Number(vehicleId),
       invoice_date,

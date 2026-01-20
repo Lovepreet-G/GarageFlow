@@ -138,7 +138,6 @@ export const updateInvoiceStatus = async (req, res) => {
 export const createInvoice = async (req, res) => {
   const shopId = req.shop.id
   const {
-    invoice_number,
     customer_id,
     vehicle_id,
     invoice_date,
@@ -152,7 +151,7 @@ export const createInvoice = async (req, res) => {
     items = [],
   } = req.body
 
-  if (!invoice_number || !customer_id || !vehicle_id || !invoice_date) {
+  if (!customer_id || !vehicle_id || !invoice_date) {
     return res.status(400).json({ message: "Missing required fields" })
   }
 
@@ -163,6 +162,26 @@ export const createInvoice = async (req, res) => {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
+    // Generate invoice number (simple sequential per shop)
+    const [shopRows] = await conn.query(
+    "SELECT next_invoice_no FROM shops WHERE id = ? FOR UPDATE",
+    [shopId]
+    )
+
+    if (!shopRows.length) {
+    await conn.rollback()
+    return res.status(400).json({ message: "Shop not found" })
+    }
+
+    const nextNo = shopRows[0].next_invoice_no
+    const invoice_number = `INV-${String(nextNo).padStart(5, "0")}`
+
+    // increment counter
+    await conn.query(
+    "UPDATE shops SET next_invoice_no = next_invoice_no + 1 WHERE id = ?",
+    [shopId]
+    )
+    // --- end invoice number generation ---
 
     // Ensure customer belongs to logged-in shop
     const [custRows] = await conn.query(
