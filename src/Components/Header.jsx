@@ -45,15 +45,19 @@ function Header() {
           </div>
 
           {/* Center: Shop name */}
-          <div className="text-center">
-            <div className="text-sm md:text-base font-semibold tracking-wide">
-              {shopName || "Shop"}
-            </div>
-            <div className="text-xs text-slate-500">
-              Powered by <span className="font-medium">GarageFlow</span>
-            </div>
-          </div>
-
+        <button
+        type="button"
+        onClick={() => navigate("/profile")}
+        className="text-center group"
+        title="Open Profile"
+        >
+        <div className="text-sm md:text-base font-semibold tracking-wide group-hover:underline">
+            {shopName || "Shop"}
+        </div>
+        <div className="text-xs text-slate-500">
+            Powered by <span className="font-medium">GarageFlow</span>
+        </div>
+        </button>
           {/* Right: Logout */}
           <div className="min-w-[200px] flex justify-end">
             <button

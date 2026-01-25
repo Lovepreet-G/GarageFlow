@@ -1,5 +1,5 @@
 import express from "express"
-import { requireAuth } from "../middleware/requireAuth.js"
+import { requireAuth } from "../middleware/authMiddleware.js"
 import { uploadLogo } from "../middleware/uploadLogo.js"
 import { updateShopLogo } from "../controllers/shopController.js"
 

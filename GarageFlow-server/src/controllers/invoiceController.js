@@ -183,7 +183,7 @@ export const invoicePdf = async (req, res) => {
     const [invRows] = await pool.query(
       `
       SELECT
-        i.*,
+        i.*,DATE_FORMAT(i.invoice_date, '%Y-%m-%d') AS invoice_date,DATE_FORMAT(i.due_date, '%Y-%m-%d') AS due_date,
         s.shop_name, s.logo_url, s.shop_address, s.shop_phone, s.shop_email, s.tax_id,
         c.customer_name, c.customer_phone, c.customer_email, c.customer_address,
         v.vehicle_vin, v.make, v.model, v.year, v.license_plate
@@ -252,7 +252,7 @@ export const listInvoices = async (req, res) => {
       SELECT
         i.id,
         i.invoice_number,
-        i.invoice_date,
+        DATE_FORMAT(i.invoice_date, '%Y-%m-%d') AS invoice_date,
         i.subtotal_amount,
         i.tax_amount,
         i.total_amount,
@@ -307,7 +307,7 @@ export const getInvoiceById = async (req, res) => {
     const [invRows] = await pool.query(
       `
       SELECT
-        i.*,
+        i.*,DATE_FORMAT(i.invoice_date, '%Y-%m-%d') AS invoice_date,DATE_FORMAT(i.due_date, '%Y-%m-%d') AS due_date,
         c.customer_name, c.customer_address, c.customer_phone, c.customer_email,
         v.vehicle_vin, v.make, v.model, v.year, v.license_plate,
         s.shop_name, s.shop_address, s.shop_phone, s.shop_email, s.tax_id, s.logo_url

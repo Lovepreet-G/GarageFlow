@@ -54,7 +54,7 @@ export const getDashboard = async (req, res) => {
       SELECT
         i.id,
         i.invoice_number,
-        i.invoice_date,
+        DATE_FORMAT(i.invoice_date, '%Y-%m-%d') AS invoice_date,
         i.total_amount,
         DATEDIFF(CURDATE(), i.invoice_date) AS days_open,
         c.customer_name,

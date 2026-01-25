@@ -11,6 +11,7 @@ import Invoices from './Pages/Invoices'
 import Customers from './Pages/Customers'
 import CreateInvoice from './Pages/CreateInvoice'
 import InvoiceView from "./pages/InvoiceView"
+import Profile from './Pages/Profile'
 
 function App() {
   const location = useLocation()
@@ -42,7 +43,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/invoices"
               element={
