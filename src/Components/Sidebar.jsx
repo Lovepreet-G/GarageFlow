@@ -1,44 +1,83 @@
 import { NavLink, useNavigate } from "react-router-dom"
 
-function Aside() {
+function Sidebar({ open, onClose }) {
   const navigate = useNavigate()
 
   const linkClass = ({ isActive }) =>
     [
-      "block px-4 py-2 rounded-lg text-sm",
-      isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100",
+      "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold",
+      isActive
+        ? "bg-slate-900 text-white shadow"
+        : "text-slate-600 hover:bg-slate-100",
     ].join(" ")
 
+  const goCreate = () => {
+    onClose?.()
+    navigate("/create-invoice")
+  }
+
   return (
-    <aside className="fixed top-16 left-0 z-40 w-64 h-[calc(100vh-64px)] bg-white border-r p-4">
-      <nav className="space-y-1">
-        <NavLink to="/" className={linkClass}>
-          Dashboard
-        </NavLink>
+    <>
+      {/* Mobile overlay */}
+      <div
+        className={[
+          "fixed inset-0 z-40 bg-black/40 lg:hidden transition-opacity",
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+        ].join(" ")}
+        onClick={onClose}
+      />
 
-        <NavLink to="/invoices" className={linkClass}>
-          Invoices
-        </NavLink>
+      {/* Sidebar panel */}
+      <aside
+        className={[
+          "fixed top-16 left-0 z-50 h-[calc(100vh-64px)] w-64 bg-white border-r",
+          "p-4 flex flex-col",
+          // desktop always visible
+          "lg:translate-x-0",
+          // mobile drawer
+          open ? "translate-x-0" : "-translate-x-full",
+          "transition-transform duration-200",
+        ].join(" ")}
+      >
+        <nav className="space-y-2">
+          <NavLink to="/" className={linkClass} onClick={onClose}>
+            <span>▦</span> <span>DASHBOARD</span>
+          </NavLink>
 
-        <NavLink to="/customers" className={linkClass}>
-          Customers
-        </NavLink>
+          <NavLink to="/invoices" className={linkClass} onClick={onClose}>
+            <span>🧾</span> <span>INVOICES</span>
+          </NavLink>
 
-        {/* ✅ NEW: Profile */}
-        <NavLink to="/profile" className={linkClass}>
-          Profile
-        </NavLink>
+          <NavLink to="/customers" className={linkClass} onClick={onClose}>
+            <span>👥</span> <span>CUSTOMERS</span>
+          </NavLink>
 
-        <button
-          type="button"
-          onClick={() => navigate("/create-invoice")}
-          className="w-full mt-3 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700"
-        >
-          Create +
-        </button>
-      </nav>
-    </aside>
+          <NavLink to="/profile" className={linkClass} onClick={onClose}>
+            <span>👤</span> <span>PROFILE</span>
+          </NavLink>
+
+          <button
+            type="button"
+            onClick={goCreate}
+            className="w-full mt-4 px-4 py-3 rounded-2xl bg-cyan-600 text-white font-bold hover:bg-cyan-700 shadow"
+          >
+            CREATE +
+          </button>
+        </nav>
+
+        <div className="mt-auto pt-4">
+          <div className="bg-slate-50 border rounded-2xl p-4">
+            <div className="text-[11px] tracking-widest text-slate-500 font-semibold">
+              SYSTEM HEALTH
+            </div>
+            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div className="h-full w-2/3 bg-cyan-600 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
 
-export default Aside
+export default Sidebar

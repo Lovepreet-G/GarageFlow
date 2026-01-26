@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../api"
 
@@ -7,12 +7,10 @@ function isValidEmail(email) {
 }
 
 function normalizePhone(phone) {
-  // keep digits only
   return phone.replace(/[^\d]/g, "")
 }
 
 function isValidPhone(phone) {
-  // Accept 10 digits (most common), or 11 digits starting with 1 (Canada/US)
   const digits = normalizePhone(phone)
   if (digits.length === 10) return true
   if (digits.length === 11 && digits.startsWith("1")) return true
@@ -24,7 +22,7 @@ function Register() {
 
   const [form, setForm] = useState({
     shop_name: "",
-    logo_file: null, // optional (not sent unless you implement upload)
+    logo_file: null,
     shop_address: "",
     shop_phone: "",
     shop_email: "",
@@ -72,7 +70,6 @@ function Register() {
     }
 
     if (!form.shop_name.trim()) e.shop_name = "Shop name is required."
-
     if (!form.shop_address.trim()) e.shop_address = "Address is required."
 
     if (!form.shop_phone.trim()) e.shop_phone = "Phone number is required."
@@ -85,9 +82,6 @@ function Register() {
     else if (form.confirm_email.trim() !== form.shop_email.trim())
       e.confirm_email = "Emails do not match."
 
-    // tax_id optional, but you can make it required if you want:
-    // if (!form.tax_id.trim()) e.tax_id = "GST/HST number is required."
-
     if (!form.password) e.password = "Password is required."
     else if (form.password.length < 6) e.password = "Password must be at least 6 characters."
 
@@ -97,8 +91,7 @@ function Register() {
 
     if (!form.accept_terms) e.accept_terms = "You must accept terms & conditions."
 
-    // Logo validation (optional):
-    // If user selected a file, enforce PNG only
+    // Logo: optional, but if selected enforce PNG
     if (form.logo_file) {
       const okType =
         form.logo_file.type === "image/png" ||
@@ -144,38 +137,23 @@ function Register() {
 
     setLoading(true)
     try {
-        const fd = new FormData()
-        fd.append("shop_name", form.shop_name.trim())
-        fd.append("shop_address", form.shop_address.trim())
-        fd.append("shop_phone", form.shop_phone.trim())
-        fd.append("shop_email", form.shop_email.trim())
-        fd.append("password", form.password)
-        fd.append("tax_id", form.tax_id.trim())
-        if (form.logo_file) fd.append("logo", form.logo_file)
+      const fd = new FormData()
+      fd.append("shop_name", form.shop_name.trim())
+      fd.append("shop_address", form.shop_address.trim())
+      fd.append("shop_phone", form.shop_phone.trim())
+      fd.append("shop_email", form.shop_email.trim())
+      fd.append("password", form.password)
+      fd.append("tax_id", form.tax_id.trim())
+      if (form.logo_file) fd.append("logo", form.logo_file)
 
-        await api.post("/auth/register", fd)
-      // Since your backend INSERT does not include logo_url yet,
-      // we send JSON only. We'll add logo upload later.
-    //   await api.post("/auth/register", {
-    //     shop_name: form.shop_name.trim(),
-    //     shop_address: form.shop_address.trim(),
-    //     shop_phone: form.shop_phone.trim(),
-    //     shop_email: form.shop_email.trim(),
-    //     password: form.password,
-    //     tax_id: form.tax_id.trim() || null,
-    //   })
-
+      await api.post("/auth/register", fd)
       navigate("/login")
     } catch (err) {
       const msg = err.response?.data?.message || "Registration failed"
 
-      // Map common backend errors to fields
-      if (
-        msg.toLowerCase().includes("email") &&
-        (msg.toLowerCase().includes("exists") || msg.toLowerCase().includes("duplicate"))
-      ) {
+      if (msg.toLowerCase().includes("email")) {
         setErrors((prev) => ({ ...prev, shop_email: msg }))
-      } else if (msg.toLowerCase().includes("phone") && msg.toLowerCase().includes("duplicate")) {
+      } else if (msg.toLowerCase().includes("phone")) {
         setErrors((prev) => ({ ...prev, shop_phone: msg }))
       } else {
         setErrors((prev) => ({ ...prev, general: msg }))
@@ -185,227 +163,272 @@ function Register() {
     }
   }
 
+  const fileLabel = useMemo(() => {
+    return form.logo_file?.name ? form.logo_file.name : "No file chosen"
+  }, [form.logo_file])
+
+  const inputBase =
+    "w-full rounded-2xl bg-slate-100/70 px-4 py-3 border border-transparent " +
+    "outline-none focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-200 transition"
+
+  const labelClass = "text-[11px] tracking-widest text-slate-400 font-semibold mb-2"
+
+  const fieldWrap = "space-y-2"
+  const errText = (msg) => (msg ? <div className="text-sm text-red-600">{msg}</div> : null)
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-2xl bg-white border rounded-2xl p-6">
-        <div className="text-center mb-6">
-          <div className="text-2xl font-bold">GarageFlow</div>
-          <div className="text-sm text-slate-500">Create your shop account</div>
+    <div className="min-h-screen min-w-screen bg-slate-50 w-100 px-4 py-10">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="bg-white rounded-[32px] shadow-xl border border-slate-100 px-5 py-8 sm:px-10">
+          {/* Header */}
+          <div className="text-center">
+            <div className="flex flex-col items-center gap-3">
+                {/* Logo */}
+                <img
+                    src="../public/Logo_half.png"
+                    alt="GarageFlow"
+                    className="h-10 w-10 sm:h-14 sm:w-14 object-contain"
+                />
+
+                {/* Brand name */}
+                <div className="text-2xl sm:text-3xl font-extrabold tracking-wide">
+                    <span className="text-slate-900 italic">GARAGE</span>
+                    <span className="text-cyan-600 italic">FLOW</span>
+                </div>
+            </div>
+
+
+            <div className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900">
+              Join the <span className="text-cyan-600 italic">Flow</span>
+            </div>
+
+            <div className="mt-2 text-xs tracking-widest text-slate-400 font-semibold">
+              CREATE YOUR SHOP ENVIRONMENT
+            </div>
+          </div>
+
+          {/* General error */}
+          {errors.general ? (
+            <div className="mt-6 text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+              {errors.general}
+            </div>
+          ) : null}
+
+          {/* Form */}
+          <form onSubmit={onSubmit} className="mt-8 space-y-6">
+            {/* Grid: mobile 1 col, desktop 2 col */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Shop Name */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>SHOP NAME *</div>
+                <input
+                  className={[
+                    inputBase,
+                    errors.shop_name ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.shop_name}
+                  onChange={(e) => setField("shop_name", e.target.value)}
+                  placeholder="e.g. Master Motors"
+                />
+                {errText(errors.shop_name)}
+              </div>
+
+              {/* Logo */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>LOGO (PNG)</div>
+
+                <div
+                  className={[
+                    "flex items-center gap-3 rounded-2xl bg-slate-100/70 px-4 py-3",
+                    errors.logo_file ? "border border-red-500 bg-red-50" : "border border-transparent",
+                  ].join(" ")}
+                >
+                  <label className="px-4 py-2 rounded-xl bg-indigo-950 text-white text-sm font-semibold cursor-pointer hover:bg-indigo-900 whitespace-nowrap">
+                    Choose File
+                    <input
+                      type="file"
+                      accept="image/png"
+                      className="hidden"
+                      onChange={(e) => setField("logo_file", e.target.files?.[0] || null)}
+                    />
+                  </label>
+
+                  <div className="text-sm text-slate-600 truncate">{fileLabel}</div>
+                </div>
+
+                {errText(errors.logo_file)}
+              </div>
+
+              {/* Address - full width */}
+              <div className={[fieldWrap, "md:col-span-2"].join(" ")}>
+                <div className={labelClass}>SERVICE ADDRESS *</div>
+                <input
+                  className={[
+                    inputBase,
+                    errors.shop_address ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.shop_address}
+                  onChange={(e) => setField("shop_address", e.target.value)}
+                  placeholder="123 Main St, Toronto, ON"
+                />
+                {errText(errors.shop_address)}
+              </div>
+
+              {/* Phone */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>PHONE *</div>
+                <input
+                  className={[
+                    inputBase,
+                    errors.shop_phone ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.shop_phone}
+                  onChange={(e) => setField("shop_phone", e.target.value)}
+                  placeholder="(416) 555-1234"
+                />
+                {errText(errors.shop_phone)}
+              </div>
+
+              {/* Tax ID */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>TAX ID / HST</div>
+                <input
+                  className={[
+                    inputBase,
+                    errors.tax_id ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.tax_id}
+                  onChange={(e) => setField("tax_id", e.target.value)}
+                  placeholder="RT0001 (Optional)"
+                />
+                {errText(errors.tax_id)}
+              </div>
+
+              {/* Email */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>SHOP EMAIL *</div>
+                <input
+                  type="email"
+                  className={[
+                    inputBase,
+                    errors.shop_email ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.shop_email}
+                  onChange={(e) => setField("shop_email", e.target.value)}
+                  placeholder="shop@garageflow.com"
+                  autoComplete="email"
+                />
+                {errText(errors.shop_email)}
+              </div>
+
+              {/* Confirm Email */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>VERIFY EMAIL *</div>
+                <input
+                  type="email"
+                  className={[
+                    inputBase,
+                    errors.confirm_email ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.confirm_email}
+                  onChange={(e) => setField("confirm_email", e.target.value)}
+                  placeholder="Re-type email"
+                  autoComplete="email"
+                />
+                {errText(errors.confirm_email)}
+              </div>
+
+              {/* Password */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>PASSWORD *</div>
+                <input
+                  type="password"
+                  className={[
+                    inputBase,
+                    errors.password ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.password}
+                  onChange={(e) => setField("password", e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                {errText(errors.password)}
+              </div>
+
+              {/* Confirm password */}
+              <div className={fieldWrap}>
+                <div className={labelClass}>REPEAT PASSWORD *</div>
+                <input
+                  type="password"
+                  className={[
+                    inputBase,
+                    errors.confirm_password ? "border-red-500 bg-red-50 focus:ring-red-100" : "",
+                  ].join(" ")}
+                  value={form.confirm_password}
+                  onChange={(e) => setField("confirm_password", e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                {errText(errors.confirm_password)}
+              </div>
+            </div>
+
+            {/* Terms */}
+            <div className="pt-2">
+              <label className="flex items-start gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={form.accept_terms}
+                  onChange={(e) => setField("accept_terms", e.target.checked)}
+                />
+                <span>
+                  I agree to the{" "}
+                  <a className="text-cyan-700 font-semibold hover:underline" href="#">
+                    Terms & Conditions
+                  </a>
+                </span>
+              </label>
+              {errText(errors.accept_terms)}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={loading}
+                className={[
+                  "w-full sm:w-auto px-8 py-3 rounded-2xl border font-semibold",
+                  loading ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50",
+                ].join(" ")}
+              >
+                CLEAR
+              </button>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={[
+                  "w-full sm:w-auto px-10 py-3 rounded-2xl font-semibold text-white shadow-lg",
+                  loading ? "bg-slate-400 cursor-not-allowed" : "bg-indigo-950 hover:bg-indigo-900",
+                ].join(" ")}
+              >
+                {loading ? "CREATING..." : "IGNITE ENGINE"}
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="text-sm text-center pt-2">
+              <span className="text-slate-500">Already have an account?</span>{" "}
+              <Link to="/login" className="text-cyan-700 font-semibold hover:underline">
+                Sign in
+              </Link>
+            </div>
+          </form>
         </div>
 
-        {errors.general ? (
-          <div className="mb-4 text-sm text-red-600">{errors.general}</div>
-        ) : null}
-
-        <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Shop Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Shop Name *</label>
-            <input
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.shop_name ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.shop_name}
-              onChange={(e) => setField("shop_name", e.target.value)}
-              placeholder="Your Shop Name"
-            />
-            {errors.shop_name ? (
-              <div className="mt-1 text-sm text-red-600">{errors.shop_name}</div>
-            ) : null}
-          </div>
-
-          {/* Logo */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Logo (PNG)</label>
-            <input
-              type="file"
-              accept="image/png"
-              className={[
-                "w-full border rounded px-3 py-2 bg-white",
-                errors.logo_file ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              onChange={(e) => setField("logo_file", e.target.files?.[0] || null)}
-            />
-            {errors.logo_file ? (
-              <div className="mt-1 text-sm text-red-600">{errors.logo_file}</div>
-            ) : null}
-          </div>
-
-          {/* Address */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Address *</label>
-            <input
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.shop_address ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.shop_address}
-              onChange={(e) => setField("shop_address", e.target.value)}
-              placeholder="123 Main Street, Toronto, ON"
-            />
-            {errors.shop_address ? (
-              <div className="mt-1 text-sm text-red-600">{errors.shop_address}</div>
-            ) : null}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Phone *</label>
-            <input
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.shop_phone ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.shop_phone}
-              onChange={(e) => setField("shop_phone", e.target.value)}
-              placeholder="(416) 555-1234"
-            />
-            {errors.shop_phone ? (
-              <div className="mt-1 text-sm text-red-600">{errors.shop_phone}</div>
-            ) : null}
-          </div>
-
-          {/* Tax ID */}
-          <div>
-            <label className="block text-sm font-medium mb-1">GST/HST Number</label>
-            <input
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.tax_id ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.tax_id}
-              onChange={(e) => setField("tax_id", e.target.value)}
-              placeholder="Optional"
-            />
-            {errors.tax_id ? (
-              <div className="mt-1 text-sm text-red-600">{errors.tax_id}</div>
-            ) : null}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Email *</label>
-            <input
-              type="email"
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.shop_email ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.shop_email}
-              onChange={(e) => setField("shop_email", e.target.value)}
-              placeholder="shop@example.com"
-              autoComplete="email"
-            />
-            {errors.shop_email ? (
-              <div className="mt-1 text-sm text-red-600">{errors.shop_email}</div>
-            ) : null}
-          </div>
-
-          {/* Confirm Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Confirm Email *</label>
-            <input
-              type="email"
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.confirm_email ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.confirm_email}
-              onChange={(e) => setField("confirm_email", e.target.value)}
-              placeholder="re-enter email"
-              autoComplete="email"
-            />
-            {errors.confirm_email ? (
-              <div className="mt-1 text-sm text-red-600">{errors.confirm_email}</div>
-            ) : null}
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Password *</label>
-            <input
-              type="password"
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.password ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.password}
-              onChange={(e) => setField("password", e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
-            {errors.password ? (
-              <div className="mt-1 text-sm text-red-600">{errors.password}</div>
-            ) : null}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Confirm Password *</label>
-            <input
-              type="password"
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.confirm_password ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={form.confirm_password}
-              onChange={(e) => setField("confirm_password", e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
-            {errors.confirm_password ? (
-              <div className="mt-1 text-sm text-red-600">{errors.confirm_password}</div>
-            ) : null}
-          </div>
-
-          {/* Terms */}
-          <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.accept_terms}
-                onChange={(e) => setField("accept_terms", e.target.checked)}
-              />
-              I agree to the Terms & Conditions
-            </label>
-            {errors.accept_terms ? (
-              <div className="mt-1 text-sm text-red-600">{errors.accept_terms}</div>
-            ) : null}
-          </div>
-
-          {/* Buttons */}
-          <div className="md:col-span-2 flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2 rounded border hover:bg-slate-50"
-              disabled={loading}
-            >
-              Reset
-            </button>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className={[
-                "px-4 py-2 rounded font-semibold text-white",
-                loading
-                  ? "bg-slate-400 cursor-not-allowed"
-                  : "bg-slate-900 hover:bg-slate-800",
-              ].join(" ")}
-            >
-              {loading ? "Creating..." : "Submit"}
-            </button>
-          </div>
-        </form>
-
-        <div className="text-sm text-center mt-5">
-          <span className="text-slate-600">Already have an account?</span>{" "}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Login
-          </Link>
-        </div>
+        <div className="text-center text-xs text-slate-400 mt-4">Powered by GarageFlow</div>
       </div>
     </div>
   )
