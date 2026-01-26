@@ -2,22 +2,25 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
 
+const toYMDLocal = (date) => date.toLocaleDateString("en-CA") // YYYY-MM-DD (local)
+
 function Home() {
   const navigate = useNavigate()
 
   const now = new Date()
-  const [month, setMonth] = useState(now.getMonth() + 1) // 1-12
+  const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
 
-  // weekStart (Monday)
-  const getMonday = (d) => {
+  // ✅ weekStart Monday (local, no UTC shift)
+  const getMondayYMD = (d) => {
     const x = new Date(d)
     const day = x.getDay() // 0 Sun .. 6 Sat
-    const diff = (day === 0 ? -6 : 1) - day // shift to Monday
+    const diff = (day === 0 ? -6 : 1) - day
     x.setDate(x.getDate() + diff)
-    return x.toISOString().slice(0, 10)
+    return toYMDLocal(x)
   }
-  const [weekStart, setWeekStart] = useState(getMonday(new Date()))
+
+  const [weekStart, setWeekStart] = useState(getMondayYMD(new Date()))
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState({
@@ -29,20 +32,23 @@ function Home() {
 
   const money = (v) => `$${Number(v || 0).toFixed(2)}`
 
+  // ✅ Build 7 days locally (no ISO timezone shift)
   const days = useMemo(() => {
-    const start = new Date(weekStart)
+    const [y, m, d] = weekStart.split("-").map(Number)
+    const start = new Date(y, m - 1, d)
     const arr = []
     for (let i = 0; i < 7; i++) {
-      const d = new Date(start)
-      d.setDate(start.getDate() + i)
-      arr.push(d.toISOString().slice(0, 10))
+      const dt = new Date(start)
+      dt.setDate(start.getDate() + i)
+      arr.push(toYMDLocal(dt))
     }
     return arr
   }, [weekStart])
 
+  // backend now already returns 7 days, but this keeps UI safe anyway
   const dailyMap = useMemo(() => {
     const m = new Map()
-    for (const r of data.dailySales) m.set(r.day, r.total)
+    for (const r of data.dailySales || []) m.set(r.day, r.total)
     return m
   }, [data.dailySales])
 
@@ -56,11 +62,10 @@ function Home() {
     setLoading(true)
     try {
       const res = await api.get("/dashboard", {
-        params: { month, year, weekStart }, // ✅ using params
+        params: { month, year, weekStart },
       })
       setData(res.data)
     } catch (e) {
-      // keep dashboard resilient
       console.error(e)
     } finally {
       setLoading(false)
@@ -73,9 +78,10 @@ function Home() {
   }, [month, year, weekStart])
 
   const shiftWeek = (deltaDays) => {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + deltaDays)
-    setWeekStart(d.toISOString().slice(0, 10))
+    const [y, m, d] = weekStart.split("-").map(Number)
+    const dt = new Date(y, m - 1, d)
+    dt.setDate(dt.getDate() + deltaDays)
+    setWeekStart(toYMDLocal(dt))
   }
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -130,23 +136,15 @@ function Home() {
             </div>
           </div>
 
-          <div className="text-3xl font-bold mt-2">
-            {loading ? "…" : money(data.totalSales)}
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Paid invoices in selected month/year
-          </div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : money(data.totalSales)}</div>
+          <div className="text-xs text-slate-500 mt-1">Paid invoices in selected month/year</div>
         </div>
 
         {/* Unpaid total */}
         <div className="bg-white border rounded-xl p-4">
           <div className="text-sm text-slate-500">Total Unpaid Amount</div>
-          <div className="text-3xl font-bold mt-2">
-            {loading ? "…" : money(data.totalUnpaid)}
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Approved + Overdue
-          </div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : money(data.totalUnpaid)}</div>
+          <div className="text-xs text-slate-500 mt-1">Approved + Overdue</div>
         </div>
 
         {/* Quick action */}
@@ -204,17 +202,13 @@ function Home() {
                 <div className="w-full border rounded bg-slate-100 h-28 flex items-end overflow-hidden">
                   <div className="w-full bg-slate-900" style={{ height: `${h}%` }} />
                 </div>
-                <div className="text-[10px] text-slate-500">
-                  {d.day.slice(5)} {/* MM-DD */}
-                </div>
+                <div className="text-[10px] text-slate-500">{d.day.slice(5)}</div>
               </div>
             )
           })}
         </div>
 
-        <div className="text-xs text-slate-500 mt-3">
-          Paid invoices grouped by invoice date.
-        </div>
+        <div className="text-xs text-slate-500 mt-3">Paid invoices grouped by invoice date.</div>
       </div>
 
       {/* Reminder window */}

@@ -10,12 +10,14 @@ import Home from './Pages/Home'
 import Invoices from './Pages/Invoices'
 import Customers from './Pages/Customers'
 import CreateInvoice from './Pages/CreateInvoice'
-import InvoiceView from "./pages/InvoiceView"
+import InvoiceView from "./Pages/InvoiceView"
 import Profile from './Pages/Profile'
+import ResetPassword from "./Pages/ResetPassword"
+
 
 function App() {
   const location = useLocation()
-  const noLayout = ['/login', '/register'].includes(location.pathname)
+  const noLayout = ['/login', '/register' , '/reset-password'].includes(location.pathname)
 
   return (
     <>
@@ -85,7 +87,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
+           
         </main>
       </div>
 

@@ -1,6 +1,7 @@
 import pool from "../config/db.js"
 import fs from "fs"
 import path from "path"
+import bcrypt from "bcrypt"
 
 export const updateShopLogo = async (req, res) => {
   const shopId = req.shop.id
@@ -41,6 +42,39 @@ export const updateShopLogo = async (req, res) => {
     try {
       fs.unlinkSync(req.file.path)
     } catch {}
+    res.status(500).json({ message: "Server error" })
+  }
+}
+
+export const updateMyPassword = async (req, res) => {
+  const shopId = req.shop.id
+  const { current_password, new_password } = req.body
+
+  if (!current_password || !new_password) {
+    return res.status(400).json({ message: "Current password and new password are required." })
+  }
+
+  if (new_password.length < 8) {
+    return res.status(400).json({ message: "Password must be at least 8 characters." })
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT password_hash FROM shops WHERE id = ?",
+      [shopId]
+    )
+
+    if (!rows.length) return res.status(404).json({ message: "Shop not found." })
+
+    const ok = await bcrypt.compare(current_password, rows[0].password_hash)
+    if (!ok) return res.status(400).json({ message: "Current password is incorrect." })
+
+    const hash = await bcrypt.hash(new_password, 10)
+    await pool.query("UPDATE shops SET password_hash = ? WHERE id = ?", [hash, shopId])
+
+    res.json({ message: "Password updated successfully." })
+  } catch (err) {
+    console.error(err)
     res.status(500).json({ message: "Server error" })
   }
 }

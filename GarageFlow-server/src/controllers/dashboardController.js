@@ -3,11 +3,13 @@ import pool from "../config/db.js"
 export const getDashboard = async (req, res) => {
   const shopId = req.shop.id
 
-  const month = Number(req.query.month) || new Date().getMonth() + 1 // 1-12
-  const year = Number(req.query.year) || new Date().getFullYear()
+  const now = new Date()
+  const month = Number(req.query.month) || now.getMonth() + 1 // 1-12
+  const year = Number(req.query.year) || now.getFullYear()
 
-  // weekStart in YYYY-MM-DD (we’ll use Monday start on frontend)
-  const weekStart = req.query.weekStart || new Date().toISOString().slice(0, 10)
+  // safer than toISOString() (avoids UTC shift)
+  const todayLocal = now.toLocaleDateString("en-CA") // YYYY-MM-DD
+  const weekStart = req.query.weekStart || todayLocal
 
   try {
     // Total sales (Paid) for selected month/year
@@ -34,21 +36,31 @@ export const getDashboard = async (req, res) => {
       [shopId]
     )
 
-    // Daily sales for the selected week (Paid only)
+    // ✅ Daily sales for selected week — ALWAYS returns 7 days (Mon..Sun)
     const [dailyRows] = await pool.query(
       `
-      SELECT invoice_date AS day, COALESCE(SUM(total_amount),0) AS total
-      FROM invoices
-      WHERE shop_id = ?
-        AND status = 'Paid'
-        AND invoice_date BETWEEN ? AND DATE_ADD(?, INTERVAL 6 DAY)
-      GROUP BY invoice_date
-      ORDER BY invoice_date ASC
+      WITH RECURSIVE days AS (
+        SELECT DATE(?) AS day
+        UNION ALL
+        SELECT DATE_ADD(day, INTERVAL 1 DAY)
+        FROM days
+        WHERE day < DATE_ADD(DATE(?), INTERVAL 6 DAY)
+      )
+      SELECT
+        DATE_FORMAT(d.day, '%Y-%m-%d') AS day,
+        COALESCE(SUM(i.total_amount), 0) AS total
+      FROM days d
+      LEFT JOIN invoices i
+        ON i.shop_id = ?
+       AND i.status = 'Paid'
+       AND i.invoice_date = d.day
+      GROUP BY d.day
+      ORDER BY d.day ASC
       `,
-      [shopId, weekStart, weekStart]
+      [weekStart, weekStart, shopId]
     )
 
-    // Reminder list: Approved not paid for >= 7 days (based on invoice_date)
+    // Reminder list: Approved not paid for >= 7 days
     const [reminderRows] = await pool.query(
       `
       SELECT
@@ -78,7 +90,7 @@ export const getDashboard = async (req, res) => {
       totalSales: Number(salesRows[0]?.totalSales || 0),
       totalUnpaid: Number(unpaidRows[0]?.totalUnpaid || 0),
       dailySales: dailyRows.map((r) => ({
-        day: String(r.day),
+        day: r.day, // already 'YYYY-MM-DD'
         total: Number(r.total),
       })),
       reminders: reminderRows.map((r) => ({

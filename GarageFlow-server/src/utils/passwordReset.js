@@ -1,0 +1,7 @@
+import crypto from "crypto"
+
+export function makeResetToken() {
+  const token = crypto.randomBytes(32).toString("hex") // raw token to send to user
+  const token_hash = crypto.createHash("sha256").update(token).digest("hex")
+  return { token, token_hash }
+}
