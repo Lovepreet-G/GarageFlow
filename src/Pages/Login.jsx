@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../api"
+import logoHalf from "../assets/logo_half.png"
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -51,7 +52,7 @@ function Login() {
 
       localStorage.setItem("token", res.data.token)
       localStorage.setItem("shop", JSON.stringify(res.data.shop))
-      navigate("/")
+      navigate("/dashboard")
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed. Please try again."
 
@@ -143,7 +144,7 @@ function Login() {
               {/* Logo row */}
               <div className="flex items-center justify-center lg:justify-start gap-3">
                 <div className="h-14 w-14 rounded-2xl bg-white/100 border border-white/15 flex items-center justify-center">
-                  <img src="../public/logo_half.png" alt="GarageFlow" className="h-12 w-12 object-contain"/>
+                  <img src={logoHalf} alt="GarageFlow" className="h-12 w-12 object-contain"/>
                 </div>
 
                 <div className="text-white">

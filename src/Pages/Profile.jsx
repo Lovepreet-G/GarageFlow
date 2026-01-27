@@ -150,158 +150,225 @@ function Profile() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Profile</h1>
-
-      {/* LOGO CARD */}
-      <div className="bg-white border rounded-xl p-5 space-y-4">
-        <div className="text-lg font-semibold">Shop Logo</div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-28 h-28 border rounded-lg flex items-center justify-center overflow-hidden bg-white">
-            {preview ? (
-              <img src={preview} alt="Preview" className="w-full h-full object-contain" />
-            ) : currentLogo ? (
-              <img src={currentLogo} alt="Shop Logo" className="w-full h-full object-contain" />
-            ) : (
-              <div className="text-xs text-slate-400">No Logo</div>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <div className="text-sm font-medium">{shop?.shop_name || "Shop"}</div>
-            <div className="text-xs text-slate-500">PNG/JPG/WebP, max 2MB</div>
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+      {/* Header (matches your big-title vibe) */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold italic tracking-tight leading-none">
+            <span className="text-slate-900">SHOP</span>{" "}
+            <span className="text-sky-500">PROFILE</span>
+          </h1>
+          <div className="mt-1 text-[11px] sm:text-xs uppercase tracking-[0.18em] text-slate-500">
+            Security & identity protocol
           </div>
         </div>
 
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(e) => onPick(e.target.files?.[0])}
-          className="block w-full text-sm"
-        />
-
-        {logoError ? <div className="text-sm text-red-600">{logoError}</div> : null}
-        {logoSuccess ? <div className="text-sm text-green-700">{logoSuccess}</div> : null}
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setFile(null)
-              setPreview("")
-              setLogoError("")
-              setLogoSuccess("")
-            }}
-            className="px-4 py-2 rounded border hover:bg-slate-50"
-            disabled={savingLogo}
-          >
-            Reset
-          </button>
-
-          <button
-            type="button"
-            onClick={saveLogo}
-            disabled={savingLogo || !file}
-            className={[
-              "px-4 py-2 rounded text-white font-semibold",
-              savingLogo || !file ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
-            ].join(" ")}
-          >
-            {savingLogo ? "Saving..." : "Update Logo"}
-          </button>
+        {/* optional space for future actions */}
+        <div className="hidden sm:block text-xs text-slate-500">
+          {shop?.shop_name ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
+              {shop.shop_name}
+            </span>
+          ) : null}
         </div>
       </div>
 
-      {/* PASSWORD CARD */}
-      <div className="bg-white border rounded-xl p-5">
-        <div className="text-lg font-semibold mb-4">Change Password</div>
-
-        {pwErrors.general ? (
-          <div className="mb-3 text-sm text-red-600">{pwErrors.general}</div>
-        ) : null}
-
-        <form onSubmit={savePassword} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Current Password</label>
-            <input
-              type="password"
-              value={pw.current_password}
-              onChange={(e) => setPwField("current_password", e.target.value)}
-              className={[
-                "w-full border rounded px-3 py-2",
-                pwErrors.current_password ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              autoComplete="current-password"
-            />
-            {pwErrors.current_password ? (
-              <div className="mt-1 text-sm text-red-600">{pwErrors.current_password}</div>
-            ) : null}
+      {/* Responsive two-column layout (stacks on mobile) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LOGO CARD */}
+        <div className="bg-white border rounded-3xl p-5 sm:p-6 shadow-sm">
+          <div className="text-sm font-extrabold italic tracking-tight">
+            <span className="text-slate-900">IDENTITY</span>{" "}
+            <span className="text-sky-500">BRANDING</span>
+          </div>
+          <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+            Visual identifier profile
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">New Password</label>
-            <input
-              type="password"
-              value={pw.new_password}
-              onChange={(e) => setPwField("new_password", e.target.value)}
-              className={[
-                "w-full border rounded px-3 py-2",
-                pwErrors.new_password ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              autoComplete="new-password"
-            />
-            {pwErrors.new_password ? (
-              <div className="mt-1 text-sm text-red-600">{pwErrors.new_password}</div>
-            ) : (
-              <div className="mt-1 text-xs text-slate-500">Minimum 8 characters.</div>
-            )}
+          <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 border rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50">
+              {preview ? (
+                <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+              ) : currentLogo ? (
+                <img src={currentLogo} alt="Shop Logo" className="w-full h-full object-contain" />
+              ) : (
+                <div className="text-xs text-slate-400">NO LOGO SET</div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="text-base font-bold italic text-slate-900 truncate">
+                {(shop?.shop_name || "SAMPLE SHOP").toUpperCase()}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">PNG/JPG/WebP, max 2MB</div>
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Upload logo
+                </label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => onPick(e.target.files?.[0])}
+                  className="block w-full text-sm file:mr-3 file:rounded-xl file:border file:border-slate-200 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-slate-50"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              value={pw.confirm_password}
-              onChange={(e) => setPwField("confirm_password", e.target.value)}
-              className={[
-                "w-full border rounded px-3 py-2",
-                pwErrors.confirm_password ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              autoComplete="new-password"
-            />
-            {pwErrors.confirm_password ? (
-              <div className="mt-1 text-sm text-red-600">{pwErrors.confirm_password}</div>
-            ) : null}
-          </div>
+          {logoError ? (
+            <div className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+              {logoError}
+            </div>
+          ) : null}
+          {logoSuccess ? (
+            <div className="mt-3 text-sm text-green-800 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+              {logoSuccess}
+            </div>
+          ) : null}
 
-          <div className="flex justify-end">
+          <div className="mt-5 flex flex-col sm:flex-row justify-end gap-2">
             <button
-              type="submit"
-              disabled={savingPw}
+              type="button"
+              onClick={() => {
+                setFile(null)
+                setPreview("")
+                setLogoError("")
+                setLogoSuccess("")
+              }}
+              className="px-4 py-2 rounded-2xl border bg-white hover:bg-slate-50"
+              disabled={savingLogo}
+            >
+              RESET
+            </button>
+
+            <button
+              type="button"
+              onClick={saveLogo}
+              disabled={savingLogo || !file}
               className={[
-                "px-5 py-2 rounded text-white font-semibold",
-                savingPw ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
+                "px-4 py-2 rounded-2xl text-white font-semibold shadow-sm",
+                savingLogo || !file
+                  ? "bg-slate-400 cursor-not-allowed"
+                  : "bg-slate-900 hover:bg-slate-800",
               ].join(" ")}
             >
-              {savingPw ? "Updating..." : "Update Password"}
+              {savingLogo ? "UPDATING..." : "UPDATE BRAND"}
             </button>
           </div>
-        </form>
+        </div>
+
+        {/* PASSWORD CARD */}
+        <div className="bg-white border rounded-3xl p-5 sm:p-6 shadow-sm">
+          <div className="text-sm font-extrabold italic tracking-tight">
+            <span className="text-slate-900">SECURITY</span>{" "}
+            <span className="text-sky-500">VAULT</span>
+          </div>
+          <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+            Access sequence management
+          </div>
+
+          {pwErrors.general ? (
+            <div className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+              {pwErrors.general}
+            </div>
+          ) : null}
+
+          <form onSubmit={savePassword} className="mt-5 space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={pw.current_password}
+                onChange={(e) => setPwField("current_password", e.target.value)}
+                className={[
+                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
+                  pwErrors.current_password
+                    ? "border-red-300 focus:ring-red-200"
+                    : "border-slate-200 focus:ring-slate-200",
+                ].join(" ")}
+                autoComplete="current-password"
+              />
+              {pwErrors.current_password ? (
+                <div className="mt-2 text-sm text-red-600">{pwErrors.current_password}</div>
+              ) : null}
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={pw.new_password}
+                onChange={(e) => setPwField("new_password", e.target.value)}
+                className={[
+                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
+                  pwErrors.new_password
+                    ? "border-red-300 focus:ring-red-200"
+                    : "border-slate-200 focus:ring-slate-200",
+                ].join(" ")}
+                autoComplete="new-password"
+              />
+              {pwErrors.new_password ? (
+                <div className="mt-2 text-sm text-red-600">{pwErrors.new_password}</div>
+              ) : (
+                <div className="mt-2 text-xs text-slate-500">Minimum 8 characters.</div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={pw.confirm_password}
+                onChange={(e) => setPwField("confirm_password", e.target.value)}
+                className={[
+                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
+                  pwErrors.confirm_password
+                    ? "border-red-300 focus:ring-red-200"
+                    : "border-slate-200 focus:ring-slate-200",
+                ].join(" ")}
+                autoComplete="new-password"
+              />
+              {pwErrors.confirm_password ? (
+                <div className="mt-2 text-sm text-red-600">{pwErrors.confirm_password}</div>
+              ) : null}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={savingPw}
+                className={[
+                  "px-6 py-3 rounded-2xl text-white font-semibold shadow-sm w-full sm:w-auto",
+                  savingPw ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
+                ].join(" ")}
+              >
+                {savingPw ? "RE-KEYING..." : "RE-KEY VAULT"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* SUCCESS MODAL */}
       {showPwSuccess ? (
         <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center px-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl border p-6 text-center">
-            <div className="text-lg font-bold mb-2">Password Updated</div>
+          <div className="bg-white w-full max-w-sm rounded-3xl border p-6 text-center shadow-lg">
+            <div className="text-lg font-extrabold mb-2">Password Updated</div>
             <div className="text-sm text-slate-600">
               Your password has been updated successfully.
             </div>
 
             <button
               onClick={() => setShowPwSuccess(false)}
-              className="mt-5 px-6 py-2 rounded bg-slate-900 text-white hover:bg-slate-800"
+              className="mt-5 px-6 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 w-full"
             >
               OK
             </button>

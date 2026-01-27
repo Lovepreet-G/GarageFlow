@@ -58,7 +58,7 @@ function Header({ onMenuClick }) {
           <button
             type="button"
             onClick={() => navigate("/profile")}
-            className="text-center group flex-1"
+            className="text-center group flex-1 "
             title="Open Profile"
           >
             <div className="text-sm md:text-base font-semibold tracking-wide group-hover:underline">
@@ -99,7 +99,7 @@ function Header({ onMenuClick }) {
               </button>
               <button
                 onClick={logout}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-red-700"
               >
                 Log out
               </button>

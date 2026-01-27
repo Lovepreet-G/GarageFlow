@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../api"
+import logoHalf from "../assets/logo_half.png"
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -185,7 +186,7 @@ function Register() {
             <div className="flex flex-col items-center gap-3">
                 {/* Logo */}
                 <img
-                    src="../public/Logo_half.png"
+                    src={logoHalf}
                     alt="GarageFlow"
                     className="h-10 w-10 sm:h-14 sm:w-14 object-contain"
                 />

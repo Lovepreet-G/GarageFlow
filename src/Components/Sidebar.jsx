@@ -40,7 +40,7 @@ function Sidebar({ open, onClose }) {
         ].join(" ")}
       >
         <nav className="space-y-2">
-          <NavLink to="/" className={linkClass} onClick={onClose}>
+          <NavLink to="/dashboard" className={linkClass} onClick={onClose}>
             <span>▦</span> <span>DASHBOARD</span>
           </NavLink>
 
@@ -65,16 +65,7 @@ function Sidebar({ open, onClose }) {
           </button>
         </nav>
 
-        <div className="mt-auto pt-4">
-          <div className="bg-slate-50 border rounded-2xl p-4">
-            <div className="text-[11px] tracking-widest text-slate-500 font-semibold">
-              SYSTEM HEALTH
-            </div>
-            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full w-2/3 bg-cyan-600 rounded-full" />
-            </div>
-          </div>
-        </div>
+        
       </aside>
     </>
   )

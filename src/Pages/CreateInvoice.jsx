@@ -358,102 +358,133 @@ function CreateInvoice() {
     selectedCustomerObj ? `${selectedCustomerObj.customer_name} (${selectedCustomerObj.customer_phone})` : ""
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Create Invoice</h1>
-        <button
-          type="submit"
-          disabled={saving}
+  <form onSubmit={onSubmit} className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    {/* Header */}
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-[28px] sm:text-[34px] font-extrabold tracking-tight text-slate-900">
+          <span className="italic">CREATE</span>{" "}
+          <span className="italic text-cyan-500">INVOICE</span>
+        </h1>
+        <p className="text-xs tracking-[0.2em] uppercase text-slate-500">
+          GENERATION PROTOCOL
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        disabled={saving}
+        className={[
+          "h-12 px-6 rounded-2xl font-semibold text-white shadow-lg",
+          "w-full sm:w-auto",
+          saving ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800",
+        ].join(" ")}
+      >
+        {saving ? "Saving..." : "SAVE INVOICE"}
+      </button>
+    </div>
+
+    {errors.general ? (
+      <div className="text-sm text-red-600">{errors.general}</div>
+    ) : null}
+
+    {/* Dates / Odometer */}
+    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Invoice Date */}
+      <div className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[28px] p-5">
+        <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+          Invoice Date *
+        </label>
+        <input
+          type="date"
           className={[
-            "px-4 py-2 rounded text-white font-semibold",
-            saving ? "bg-slate-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700",
+            "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+            errors.invoice_date ? "border-red-500" : "border-slate-100",
           ].join(" ")}
-        >
-          {saving ? "Saving..." : "Save Invoice"}
-        </button>
+          value={invoice_date}
+          onChange={(e) => {
+            setInvoiceDate(e.target.value)
+            setErrors((p) => ({ ...p, invoice_date: "", general: "" }))
+          }}
+        />
+        {errors.invoice_date ? (
+          <div className="mt-2 text-sm text-red-600">{errors.invoice_date}</div>
+        ) : null}
       </div>
 
-      {errors.general ? <div className="text-sm text-red-600">{errors.general}</div> : null}
-
-      {/* Dates */}
-      <div className="bg-white border rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Invoice Date *</label>
-          <input
-            type="date"
-            className={[
-              "w-full border rounded px-3 py-2",
-              errors.invoice_date ? "border-red-500" : "border-slate-300",
-            ].join(" ")}
-            value={invoice_date}
-            onChange={(e) => {
-              setInvoiceDate(e.target.value)
-              setErrors((p) => ({ ...p, invoice_date: "", general: "" }))
-            }}
-          />
-          {errors.invoice_date ? <div className="mt-1 text-sm text-red-600">{errors.invoice_date}</div> : null}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
-          <input
-            type="date"
-            className={[
-              "w-full border rounded px-3 py-2",
-              errors.due_date ? "border-red-500" : "border-slate-300",
-            ].join(" ")}
-            value={due_date}
-            onChange={(e) => {
-              setDueDate(e.target.value)
-              setErrors((p) => ({ ...p, due_date: "", general: "" }))
-            }}
-          />
-          {errors.due_date ? <div className="mt-1 text-sm text-red-600">{errors.due_date}</div> : null}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Odometer</label>
-          <input
-            className={[
-              "w-full border rounded px-3 py-2",
-              errors.odometer_reading ? "border-red-500" : "border-slate-300",
-            ].join(" ")}
-            value={odometer_reading}
-            onChange={(e) => {
-              setOdometer(e.target.value)
-              setErrors((p) => ({ ...p, odometer_reading: "", general: "" }))
-            }}
-            placeholder="e.g. 123456"
-          />
-          {errors.odometer_reading ? (
-            <div className="mt-1 text-sm text-red-600">{errors.odometer_reading}</div>
-          ) : null}
-        </div>
+      {/* Due Date */}
+      <div className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[28px] p-5">
+        <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+          Due Date
+        </label>
+        <input
+          type="date"
+          className={[
+            "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+            errors.due_date ? "border-red-500" : "border-slate-100",
+          ].join(" ")}
+          value={due_date}
+          onChange={(e) => {
+            setDueDate(e.target.value)
+            setErrors((p) => ({ ...p, due_date: "", general: "" }))
+          }}
+        />
+        {errors.due_date ? (
+          <div className="mt-2 text-sm text-red-600">{errors.due_date}</div>
+        ) : null}
       </div>
 
+      {/* Odometer */}
+      <div className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[28px] p-5">
+        <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+          Odometer
+        </label>
+        <input
+          className={[
+            "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+            errors.odometer_reading ? "border-red-500" : "border-slate-100",
+          ].join(" ")}
+          value={odometer_reading}
+          onChange={(e) => {
+            setOdometer(e.target.value)
+            setErrors((p) => ({ ...p, odometer_reading: "", general: "" }))
+          }}
+          placeholder="e.g. 123456"
+        />
+        {errors.odometer_reading ? (
+          <div className="mt-2 text-sm text-red-600">{errors.odometer_reading}</div>
+        ) : null}
+      </div>
+    </section>
+
+    {/* Customer + Vehicle */}
+    <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {/* Customer */}
-      <div className="bg-white border rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold">Customer</div>
-          <div className="flex gap-2">
+      <div className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[34px] p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-extrabold italic text-slate-900">
+            CUSTOMER <span className="text-cyan-500">ENTITY</span>
+          </h2>
+
+          <div className="flex rounded-2xl bg-slate-50 p-1 border border-slate-100">
             <button
               type="button"
               className={[
-                "px-3 py-1 rounded border text-sm",
-                customerMode === "existing" ? "bg-slate-900 text-white" : "hover:bg-slate-50",
+                "px-4 h-10 rounded-xl text-sm font-semibold",
+                customerMode === "existing" ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-700",
               ].join(" ")}
               onClick={() => {
                 setCustomerMode("existing")
                 setErrors((p) => ({ ...p, customer_id: "", customerSearch: "", general: "" }))
               }}
             >
-              Existing
+              EXISTING
             </button>
             <button
               type="button"
               className={[
-                "px-3 py-1 rounded border text-sm",
-                customerMode === "new" ? "bg-slate-900 text-white" : "hover:bg-slate-50",
+                "px-4 h-10 rounded-xl text-sm font-semibold",
+                customerMode === "new" ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-700",
               ].join(" ")}
               onClick={() => {
                 setCustomerMode("new")
@@ -466,172 +497,180 @@ function CreateInvoice() {
                 setErrors((p) => ({ ...p, customer_id: "", customerSearch: "", general: "" }))
               }}
             >
-              Add New
+              ADD NEW
             </button>
           </div>
         </div>
 
-        {customerMode === "existing" ? (
-          <div className="space-y-2">
-            <input
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.customerSearch ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              placeholder="Search customer by name or phone..."
-              value={customerSearch}
-              onChange={(e) => {
-                setCustomerSearch(e.target.value)
-                setErrors((p) => ({ ...p, customerSearch: "", customer_id: "", general: "" }))
-              }}
-            />
-            {errors.customerSearch ? <div className="text-sm text-red-600">{errors.customerSearch}</div> : null}
+        <div className="mt-5">
+          {customerMode === "existing" ? (
+            <div className="space-y-3">
+              <input
+                className={[
+                  "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                  errors.customerSearch ? "border-red-500" : "border-slate-100",
+                ].join(" ")}
+                placeholder="Search customer by name or phone..."
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value)
+                  setErrors((p) => ({ ...p, customerSearch: "", customer_id: "", general: "" }))
+                }}
+              />
+              {errors.customerSearch ? (
+                <div className="text-sm text-red-600">{errors.customerSearch}</div>
+              ) : null}
 
-            {/* Selected customer pill */}
-            {customer_id && selectedCustomerObj ? (
-              <div className="flex items-center justify-between border rounded px-3 py-2 bg-slate-50">
-                <div className="text-sm">
-                  Selected: <b>{selectedCustomerLabel}</b>
+              {customer_id && selectedCustomerObj ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-slate-100 rounded-2xl px-4 py-3 bg-slate-50">
+                  <div className="text-sm">
+                    Selected: <b>{selectedCustomerLabel}</b>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-sm text-cyan-600 hover:underline self-start sm:self-auto"
+                    onClick={() => {
+                      setCustomerId("")
+                      setSelectedCustomerObj(null)
+                      setVehicles([])
+                      setVehicleId("")
+                    }}
+                  >
+                    Change
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="text-sm text-blue-600 hover:underline"
-                  onClick={() => {
-                    setCustomerId("")
-                    setSelectedCustomerObj(null)
-                    setVehicles([])
-                    setVehicleId("")
+              ) : null}
+
+              {!customer_id ? (
+                <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                  <div className="max-h-56 overflow-auto divide-y divide-slate-100">
+                    {customerLoading ? (
+                      <div className="p-4 text-sm text-slate-500">Searching...</div>
+                    ) : customerResults.length === 0 ? (
+                      <div className="p-4 text-sm text-slate-500">No customers found.</div>
+                    ) : (
+                      customerResults.map((c) => (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => {
+                            setCustomerId(String(c.id))
+                            setSelectedCustomerObj(c)
+                            setErrors((p) => ({ ...p, customer_id: "", customerSearch: "", general: "" }))
+                          }}
+                          className="w-full text-left p-4 hover:bg-slate-50"
+                        >
+                          <div className="font-semibold">{c.customer_name}</div>
+                          <div className="text-xs text-slate-500">{c.customer_phone}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {errors.customer_id ? (
+                <div className="text-sm text-red-600">{errors.customer_id}</div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <input
+                  className={[
+                    "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                    errors.newCustomer.customer_name ? "border-red-500" : "border-slate-100",
+                  ].join(" ")}
+                  placeholder="Customer Name *"
+                  value={newCustomer.customer_name}
+                  onChange={(e) => {
+                    setNewCustomer((p) => ({ ...p, customer_name: e.target.value }))
+                    setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_name: "" }, general: "" }))
                   }}
-                >
-                  Change
-                </button>
+                />
+                {errors.newCustomer.customer_name ? (
+                  <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_name}</div>
+                ) : null}
               </div>
-            ) : null}
 
-            {/* Results list */}
-            {!customer_id ? (
-              <div className="border rounded max-h-56 overflow-auto divide-y">
-                {customerLoading ? (
-                  <div className="p-3 text-sm text-slate-500">Searching...</div>
-                ) : customerResults.length === 0 ? (
-                  <div className="p-3 text-sm text-slate-500">No customers found.</div>
-                ) : (
-                  customerResults.map((c) => (
-                    <button
-                      type="button"
-                      key={c.id}
-                      onClick={() => {
-                        setCustomerId(String(c.id))
-                        setSelectedCustomerObj(c)
-                        setErrors((p) => ({ ...p, customer_id: "", customerSearch: "", general: "" }))
-                      }}
-                      className="w-full text-left p-3 hover:bg-slate-50"
-                    >
-                      <div className="font-semibold">{c.customer_name}</div>
-                      <div className="text-xs text-slate-600">{c.customer_phone}</div>
-                    </button>
-                  ))
-                )}
+              <div className="sm:col-span-2">
+                <input
+                  className={[
+                    "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                    errors.newCustomer.customer_phone ? "border-red-500" : "border-slate-100",
+                  ].join(" ")}
+                  placeholder="Phone *"
+                  value={newCustomer.customer_phone}
+                  onChange={(e) => {
+                    setNewCustomer((p) => ({ ...p, customer_phone: e.target.value }))
+                    setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_phone: "" }, general: "" }))
+                  }}
+                />
+                {errors.newCustomer.customer_phone ? (
+                  <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_phone}</div>
+                ) : null}
               </div>
-            ) : null}
 
-            {errors.customer_id ? <div className="text-sm text-red-600">{errors.customer_id}</div> : null}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* same new customer inputs as before */}
-            {/* ... kept short for readability (but it's the same logic as before) */}
-            <div>
-              <input
-                className={[
-                  "w-full border rounded px-3 py-2",
-                  errors.newCustomer.customer_name ? "border-red-500" : "border-slate-300",
-                ].join(" ")}
-                placeholder="Customer Name *"
-                value={newCustomer.customer_name}
-                onChange={(e) => {
-                  setNewCustomer((p) => ({ ...p, customer_name: e.target.value }))
-                  setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_name: "" }, general: "" }))
-                }}
-              />
-              {errors.newCustomer.customer_name ? (
-                <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_name}</div>
-              ) : null}
-            </div>
+              <div className="sm:col-span-2">
+                <input
+                  className={[
+                    "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                    errors.newCustomer.customer_email ? "border-red-500" : "border-slate-100",
+                  ].join(" ")}
+                  placeholder="Email (optional)"
+                  value={newCustomer.customer_email}
+                  onChange={(e) => {
+                    setNewCustomer((p) => ({ ...p, customer_email: e.target.value }))
+                    setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_email: "" }, general: "" }))
+                  }}
+                />
+                {errors.newCustomer.customer_email ? (
+                  <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_email}</div>
+                ) : null}
+              </div>
 
-            <div>
-              <input
-                className={[
-                  "w-full border rounded px-3 py-2",
-                  errors.newCustomer.customer_phone ? "border-red-500" : "border-slate-300",
-                ].join(" ")}
-                placeholder="Phone *"
-                value={newCustomer.customer_phone}
-                onChange={(e) => {
-                  setNewCustomer((p) => ({ ...p, customer_phone: e.target.value }))
-                  setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_phone: "" }, general: "" }))
-                }}
-              />
-              {errors.newCustomer.customer_phone ? (
-                <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_phone}</div>
-              ) : null}
+              <div className="sm:col-span-2">
+                <input
+                  className="w-full h-12 rounded-2xl px-4 bg-slate-50 border border-slate-100"
+                  placeholder="Address (optional)"
+                  value={newCustomer.customer_address}
+                  onChange={(e) => setNewCustomer((p) => ({ ...p, customer_address: e.target.value }))}
+                />
+              </div>
             </div>
-
-            <div>
-              <input
-                className={[
-                  "w-full border rounded px-3 py-2",
-                  errors.newCustomer.customer_email ? "border-red-500" : "border-slate-300",
-                ].join(" ")}
-                placeholder="Email (optional)"
-                value={newCustomer.customer_email}
-                onChange={(e) => {
-                  setNewCustomer((p) => ({ ...p, customer_email: e.target.value }))
-                  setErrors((p) => ({ ...p, newCustomer: { ...p.newCustomer, customer_email: "" }, general: "" }))
-                }}
-              />
-              {errors.newCustomer.customer_email ? (
-                <div className="mt-1 text-sm text-red-600">{errors.newCustomer.customer_email}</div>
-              ) : null}
-            </div>
-
-            <div>
-              <input
-                className="w-full border border-slate-300 rounded px-3 py-2"
-                placeholder="Address (optional)"
-                value={newCustomer.customer_address}
-                onChange={(e) => setNewCustomer((p) => ({ ...p, customer_address: e.target.value }))}
-              />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Vehicle */}
-      <div className="bg-white border rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold">Vehicle</div>
-          <div className="flex gap-2">
+      <div className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[34px] p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-extrabold italic text-slate-900">
+            VEHICLE <span className="text-cyan-500">PROFILE</span>
+          </h2>
+
+          <div className="flex rounded-2xl bg-slate-50 p-1 border border-slate-100">
             <button
               type="button"
               className={[
-                "px-3 py-1 rounded border text-sm",
-                vehicleMode === "existing" ? "bg-slate-900 text-white" : "hover:bg-slate-50",
+                "px-4 h-10 rounded-xl text-sm font-semibold",
+                vehicleMode === "existing" ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-700",
               ].join(" ")}
               onClick={() => {
                 setVehicleMode("existing")
                 setErrors((p) => ({ ...p, vehicle_id: "", general: "" }))
               }}
-              disabled={customerMode === "new"} // existing vehicle requires existing customer selection
+              disabled={customerMode === "new"}
               title={customerMode === "new" ? "Create customer first or use Add New vehicle" : ""}
             >
-              Existing
+              EXISTING
             </button>
+
             <button
               type="button"
               className={[
-                "px-3 py-1 rounded border text-sm",
-                vehicleMode === "new" ? "bg-slate-900 text-white" : "hover:bg-slate-50",
+                "px-4 h-10 rounded-xl text-sm font-semibold",
+                vehicleMode === "new" ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-700",
               ].join(" ")}
               onClick={() => {
                 setVehicleMode("new")
@@ -639,279 +678,333 @@ function CreateInvoice() {
                 setErrors((p) => ({ ...p, vehicle_id: "", general: "" }))
               }}
             >
-              Add New
+              ADD NEW
             </button>
           </div>
         </div>
 
-        {vehicleMode === "existing" ? (
-          <div>
-            <select
-              className={[
-                "w-full border rounded px-3 py-2",
-                errors.vehicle_id ? "border-red-500" : "border-slate-300",
-              ].join(" ")}
-              value={vehicle_id}
-              onChange={(e) => {
-                setVehicleId(e.target.value)
-                setErrors((p) => ({ ...p, vehicle_id: "", general: "" }))
-              }}
-              disabled={!customer_id || customerMode !== "existing"}
-            >
-              <option value="">Select vehicle</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.vehicle_vin} — {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                </option>
-              ))}
-            </select>
-            {errors.vehicle_id ? <div className="mt-1 text-sm text-red-600">{errors.vehicle_id}</div> : null}
-            {!customer_id && customerMode === "existing" ? (
-              <div className="mt-1 text-xs text-slate-500">Select a customer to load vehicles.</div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="mt-5">
+          {vehicleMode === "existing" ? (
             <div>
-              <input
+              <select
                 className={[
-                  "w-full border rounded px-3 py-2",
-                  errors.newVehicle.vehicle_vin ? "border-red-500" : "border-slate-300",
+                  "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                  errors.vehicle_id ? "border-red-500" : "border-slate-100",
                 ].join(" ")}
-                placeholder="VIN *"
-                value={newVehicle.vehicle_vin}
+                value={vehicle_id}
                 onChange={(e) => {
-                  setNewVehicle((p) => ({ ...p, vehicle_vin: e.target.value }))
-                  setErrors((p) => ({ ...p, newVehicle: { ...p.newVehicle, vehicle_vin: "" }, general: "" }))
+                  setVehicleId(e.target.value)
+                  setErrors((p) => ({ ...p, vehicle_id: "", general: "" }))
                 }}
-              />
-              {errors.newVehicle.vehicle_vin ? (
-                <div className="mt-1 text-sm text-red-600">{errors.newVehicle.vehicle_vin}</div>
+                disabled={!customer_id || customerMode !== "existing"}
+              >
+                <option value="">Select vehicle</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.vehicle_vin} — {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                  </option>
+                ))}
+              </select>
+
+              {errors.vehicle_id ? (
+                <div className="mt-2 text-sm text-red-600">{errors.vehicle_id}</div>
+              ) : null}
+
+              {!customer_id && customerMode === "existing" ? (
+                <div className="mt-2 text-xs text-slate-500">Select a customer to load vehicles.</div>
               ) : null}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <input
+                  className={[
+                    "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                    errors.newVehicle.vehicle_vin ? "border-red-500" : "border-slate-100",
+                  ].join(" ")}
+                  placeholder="VIN *"
+                  value={newVehicle.vehicle_vin}
+                  onChange={(e) => {
+                    setNewVehicle((p) => ({ ...p, vehicle_vin: e.target.value }))
+                    setErrors((p) => ({ ...p, newVehicle: { ...p.newVehicle, vehicle_vin: "" }, general: "" }))
+                  }}
+                />
+                {errors.newVehicle.vehicle_vin ? (
+                  <div className="mt-1 text-sm text-red-600">{errors.newVehicle.vehicle_vin}</div>
+                ) : null}
+              </div>
 
-            <div>
+              <div className="sm:col-span-2">
+                <input
+                  className={[
+                    "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                    errors.newVehicle.year ? "border-red-500" : "border-slate-100",
+                  ].join(" ")}
+                  placeholder="Year"
+                  value={newVehicle.year}
+                  onChange={(e) => {
+                    setNewVehicle((p) => ({ ...p, year: e.target.value }))
+                    setErrors((p) => ({ ...p, newVehicle: { ...p.newVehicle, year: "" }, general: "" }))
+                  }}
+                />
+                {errors.newVehicle.year ? (
+                  <div className="mt-1 text-sm text-red-600">{errors.newVehicle.year}</div>
+                ) : null}
+              </div>
+
               <input
-                className={[
-                  "w-full border rounded px-3 py-2",
-                  errors.newVehicle.year ? "border-red-500" : "border-slate-300",
-                ].join(" ")}
-                placeholder="Year"
-                value={newVehicle.year}
-                onChange={(e) => {
-                  setNewVehicle((p) => ({ ...p, year: e.target.value }))
-                  setErrors((p) => ({ ...p, newVehicle: { ...p.newVehicle, year: "" }, general: "" }))
-                }}
+                className="w-full h-12 rounded-2xl px-4 bg-slate-50 border border-slate-100"
+                placeholder="Make"
+                value={newVehicle.make}
+                onChange={(e) => setNewVehicle((p) => ({ ...p, make: e.target.value }))}
               />
-              {errors.newVehicle.year ? <div className="mt-1 text-sm text-red-600">{errors.newVehicle.year}</div> : null}
+              <input
+                className="w-full h-12 rounded-2xl px-4 bg-slate-50 border border-slate-100"
+                placeholder="Model"
+                value={newVehicle.model}
+                onChange={(e) => setNewVehicle((p) => ({ ...p, model: e.target.value }))}
+              />
+              <input
+                className="w-full sm:col-span-2 h-12 rounded-2xl px-4 bg-slate-50 border border-slate-100"
+                placeholder="License Plate"
+                value={newVehicle.license_plate}
+                onChange={(e) => setNewVehicle((p) => ({ ...p, license_plate: e.target.value }))}
+              />
             </div>
-
-            <input
-              className="w-full border border-slate-300 rounded px-3 py-2"
-              placeholder="Make"
-              value={newVehicle.make}
-              onChange={(e) => setNewVehicle((p) => ({ ...p, make: e.target.value }))}
-            />
-            <input
-              className="w-full border border-slate-300 rounded px-3 py-2"
-              placeholder="Model"
-              value={newVehicle.model}
-              onChange={(e) => setNewVehicle((p) => ({ ...p, model: e.target.value }))}
-            />
-            <input
-              className="w-full md:col-span-2 border border-slate-300 rounded px-3 py-2"
-              placeholder="License Plate"
-              value={newVehicle.license_plate}
-              onChange={(e) => setNewVehicle((p) => ({ ...p, license_plate: e.target.value }))}
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
+    </section>
 
-      {/* Items */}
-      <div className="bg-white border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold">Services / Items</div>
-          <button
-            type="button"
-            onClick={addItemRow}
-            className="px-3 py-2 rounded border hover:bg-slate-50 text-sm"
-          >
-            + Add Item
-          </button>
+    {/* Service Manifest */}
+    <section className="bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[34px] p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-lg font-extrabold italic text-slate-900">
+            SERVICE <span className="text-cyan-500">MANIFEST</span>
+          </h2>
         </div>
 
-        <div className="space-y-3">
-          {items.map((it, idx) => {
-            const rowErr = errors.items?.[idx] || {}
-            const rowTotal = Number(it.quantity || 0) * Number(it.unit_price || 0)
+        <button
+          type="button"
+          onClick={addItemRow}
+          className="h-11 px-5 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white text-sm font-semibold w-full sm:w-auto"
+        >
+          + ADD ITEM
+        </button>
+      </div>
 
-            return (
-              <div key={idx} className="border rounded-xl p-3">
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
-                  <div className="md:col-span-2">
-                    <input
-                      className={[
-                        "w-full border rounded px-3 py-2",
-                        rowErr.item_description ? "border-red-500" : "border-slate-300",
-                      ].join(" ")}
-                      placeholder="Description *"
-                      value={it.item_description}
-                      onChange={(e) => setItemField(idx, "item_description", e.target.value)}
-                    />
-                    {rowErr.item_description ? (
-                      <div className="mt-1 text-sm text-red-600">{rowErr.item_description}</div>
-                    ) : null}
-                  </div>
+      <div className="space-y-4">
+        {items.map((it, idx) => {
+          const rowErr = errors.items?.[idx] || {}
+          const rowTotal = Number(it.quantity || 0) * Number(it.unit_price || 0)
 
-                  <div>
-                    <select
-                      className="w-full border border-slate-300 rounded px-3 py-2"
-                      value={it.type}
-                      onChange={(e) => setItemField(idx, "type", e.target.value)}
-                    >
-                      <option value="Labor">Labor</option>
-                      <option value="Part">Part</option>
-                    </select>
-                  </div>
+          return (
+            <div key={idx} className="relative border border-slate-100 rounded-[28px] p-4 sm:p-5 bg-white">
+              {/* remove */}
+              <button
+                type="button"
+                onClick={() => removeItemRow(idx)}
+                className="absolute top-4 right-4 h-9 w-9 rounded-full bg-slate-900 text-white grid place-items-center hover:bg-slate-800 disabled:opacity-40"
+                disabled={items.length === 1}
+                title={items.length === 1 ? "At least one item required" : "Remove"}
+                >
+                <span className="translate-y-[-6px] translate-x-[-6px] text-lg font-bold">X</span>
+                </button>
 
-                  <div>
-                    <select
-                      className={[
-                        "w-full border rounded px-3 py-2",
-                        rowErr.condition ? "border-red-500" : "border-slate-300",
-                      ].join(" ")}
-                      value={it.condition}
-                      onChange={(e) => setItemField(idx, "condition", e.target.value)}
-                      disabled={it.type !== "Part"}
-                    >
-                      <option value="">{it.type === "Part" ? "Condition *" : "N/A"}</option>
-                      <option value="New">New</option>
-                      <option value="Used">Used</option>
-                      <option value="Reconditioned">Reconditioned</option>
-                    </select>
-                    {rowErr.condition ? (
-                      <div className="mt-1 text-sm text-red-600">{rowErr.condition}</div>
-                    ) : null}
-                  </div>
 
-                  <div>
-                    <input
-                      className={[
-                        "w-full border rounded px-3 py-2",
-                        rowErr.quantity ? "border-red-500" : "border-slate-300",
-                      ].join(" ")}
-                      placeholder="Qty *"
-                      value={it.quantity}
-                      onChange={(e) => setItemField(idx, "quantity", e.target.value)}
-                    />
-                    {rowErr.quantity ? <div className="mt-1 text-sm text-red-600">{rowErr.quantity}</div> : null}
-                  </div>
-
-                  <div>
-                    <input
-                      className={[
-                        "w-full border rounded px-3 py-2",
-                        rowErr.unit_price ? "border-red-500" : "border-slate-300",
-                      ].join(" ")}
-                      placeholder="Unit Price *"
-                      value={it.unit_price}
-                      onChange={(e) => setItemField(idx, "unit_price", e.target.value)}
-                    />
-                    {rowErr.unit_price ? <div className="mt-1 text-sm text-red-600">{rowErr.unit_price}</div> : null}
-                  </div>
+              {/* Responsive grid:
+                  - Mobile: stack
+                  - Tablet+: 2 columns
+                  - Desktop: “row-like” layout
+              */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 lg:items-start">
+                <div className="lg:col-span-2">
+                  <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+                    Description *
+                  </label>
+                  <input
+                    className={[
+                      "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                      rowErr.item_description ? "border-red-500" : "border-slate-100",
+                    ].join(" ")}
+                    placeholder="Description *"
+                    value={it.item_description}
+                    onChange={(e) => setItemField(idx, "item_description", e.target.value)}
+                  />
+                  {rowErr.item_description ? (
+                    <div className="mt-1 text-sm text-red-600">{rowErr.item_description}</div>
+                  ) : null}
                 </div>
 
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-sm text-slate-600">
-                    Row Total: <b>${money(rowTotal)}</b>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeItemRow(idx)}
-                    className="text-sm text-red-600 hover:underline"
-                    disabled={items.length === 1}
-                    title={items.length === 1 ? "At least one item required" : ""}
+                <div>
+                  <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+                    Type
+                  </label>
+                  <select
+                    className="w-full h-12 rounded-2xl px-4 bg-slate-50 border border-slate-100"
+                    value={it.type}
+                    onChange={(e) => setItemField(idx, "type", e.target.value)}
                   >
-                    Remove
-                  </button>
+                    <option value="Labor">Labor</option>
+                    <option value="Part">Part</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+                    Condition
+                  </label>
+                  <select
+                    className={[
+                      "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                      rowErr.condition ? "border-red-500" : "border-slate-100",
+                    ].join(" ")}
+                    value={it.condition}
+                    onChange={(e) => setItemField(idx, "condition", e.target.value)}
+                    disabled={it.type !== "Part"}
+                  >
+                    <option value="">{it.type === "Part" ? "Condition *" : "N/A"}</option>
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Reconditioned">Reconditioned</option>
+                  </select>
+                  {rowErr.condition ? (
+                    <div className="mt-1 text-sm text-red-600">{rowErr.condition}</div>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+                    Qty
+                  </label>
+                  <input
+                    className={[
+                      "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                      rowErr.quantity ? "border-red-500" : "border-slate-100",
+                    ].join(" ")}
+                    placeholder="Qty *"
+                    value={it.quantity}
+                    onChange={(e) => setItemField(idx, "quantity", e.target.value)}
+                  />
+                  {rowErr.quantity ? (
+                    <div className="mt-1 text-sm text-red-600">{rowErr.quantity}</div>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label className="block text-[10px] tracking-[0.25em] uppercase text-slate-400 mb-2">
+                    Unit Price
+                  </label>
+                  <input
+                    className={[
+                      "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
+                      rowErr.unit_price ? "border-red-500" : "border-slate-100",
+                    ].join(" ")}
+                    placeholder="Unit Price *"
+                    value={it.unit_price}
+                    onChange={(e) => setItemField(idx, "unit_price", e.target.value)}
+                  />
+                  {rowErr.unit_price ? (
+                    <div className="mt-1 text-sm text-red-600">{rowErr.unit_price}</div>
+                  ) : null}
                 </div>
               </div>
-            )
-          })}
-        </div>
+
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                <div className="text-sm text-slate-500">
+                  LINE TOTAL: <span className="font-semibold text-cyan-600">${money(rowTotal)}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
+    </section>
 
-      {/* Totals + Taxes */}
-      <div className="bg-white border rounded-xl p-4">
-        <div className="font-semibold mb-3">Totals</div>
+    {/* Bottom: Remarks + Valuation */}
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* Remarks */}
+      <div className="lg:col-span-2 bg-white/80 backdrop-blur border border-slate-100 shadow-sm rounded-[34px] p-6">
+        <h2 className="text-lg font-extrabold italic text-slate-900 mb-3">
+          LOGBOOK <span className="text-cyan-500">REMARKS</span>
+        </h2>
 
-        <div className="space-y-2 max-w-md">
-          <div className="flex justify-between">
-            <span className="text-slate-600">Subtotal</span>
-            <span className="font-semibold">${money(subtotal)}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-slate-600">HST (7%)</span>
-            <span className="font-semibold">${money(hst)}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <label className="text-slate-600 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={includePST}
-                onChange={(e) => setIncludePST(e.target.checked)}
-              />
-              PST (5%)
-            </label>
-            <span className="font-semibold">${money(pst)}</span>
-          </div>
-
-          <div className="flex justify-between text-base pt-2 border-t">
-            <span className="font-bold">Total</span>
-            <span className="font-bold">${money(total)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Note */}
-      <div className="bg-white border rounded-xl p-4">
-        <div className="font-semibold mb-2">Note</div>
         <textarea
-          className="border border-slate-300 rounded px-3 py-2 w-full min-h-[90px]"
-          placeholder="Write any note for the customer (appears on invoice)..."
+          className="w-full min-h-[170px] rounded-[28px] px-5 py-4 bg-slate-50 border border-slate-100 resize-y"
+          placeholder="Operational details for customer..."
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
 
-      {/* Bottom actions */}
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          className="px-4 py-2 rounded border hover:bg-slate-50"
-          onClick={() => navigate("/invoices")}
-          disabled={saving}
-        >
-          Cancel
-        </button>
+      {/* Valuation */}
+      <div className="bg-slate-900 text-white shadow-lg rounded-[34px] p-6 lg:sticky lg:top-24 h-fit">
+        <div className="text-lg font-extrabold italic mb-4">
+          <span className="text-cyan-400">VALUATION</span>
+        </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className={[
-            "px-4 py-2 rounded text-white font-semibold",
-            saving ? "bg-slate-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700",
-          ].join(" ")}
-        >
-          {saving ? "Saving..." : "Save Invoice"}
-        </button>
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between text-white/70">
+            <span>SUBTOTAL</span>
+            <span>${money(subtotal)}</span>
+          </div>
+
+          <div className="flex justify-between text-white/70">
+            <span>HST (7%)</span>
+            <span>${money(hst)}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-white/70">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includePST}
+                onChange={(e) => setIncludePST(e.target.checked)}
+                className="h-4 w-4 accent-cyan-400"
+              />
+              PST (5%)
+            </label>
+            <span>${money(pst)}</span>
+          </div>
+
+          <div className="border-t border-white/15 pt-4 flex items-end justify-between">
+            <div className="text-white/60 text-xs tracking-[0.25em] uppercase">
+              GRAND TOTAL
+            </div>
+            <div className="text-cyan-400 text-3xl font-extrabold italic">
+              ${money(total)}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom actions (mobile friendly) */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            className="h-12 rounded-2xl border border-white/20 text-slate-900/90 hover:bg-white/10 hover:text-white hover:border-white/10 font-semibold"
+            onClick={() => navigate("/invoices")}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className={[
+              "h-12 rounded-2xl font-semibold shadow-lg",
+              saving ? "bg-white/30 cursor-not-allowed" : "bg-cyan-500 hover:bg-cyan-400 text-slate-900",
+            ].join(" ")}
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
-    </form>
-  )
+    </section>
+  </form>
+)
+
 }
 
 export default CreateInvoice
