@@ -11,7 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
-
+#dot env files
+./GarageFlow/.env
+./GarageFlow/.env.local
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
