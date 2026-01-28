@@ -2,6 +2,7 @@ import puppeteer from "puppeteer"
 import pool from "../config/db.js"
 // helper
 const money = (v) => Number(v || 0).toFixed(2)
+const API_BASE = process.env.VITE_API_URL || ""
 
 const escapeHtml = (s = "") =>
   String(s)
@@ -87,7 +88,7 @@ const invoiceHtml = ({ invoice, items }) => {
 <body>
   <div class="top">
     <div class="shop">
-      <div class="logoBox">${invoice.logo_url ? `<img src="${"http://localhost:5000" + invoice.logo_url}" style="max-width:78px; max-height:78px; object-fit:contain;" />` : "Logo"}</div>
+      <div class="logoBox">${invoice.logo_url ? `<img src="${API_BASE + invoice.logo_url}" style="max-width:78px; max-height:78px; object-fit:contain;" />` : "Logo"}</div>
       <div>
         <h1>${shopName}</h1>
         <div class="muted">${shopAddress}</div>

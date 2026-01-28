@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import api from "../api"
 
+const API_BASE = import.meta.env.VITE_API_URL 
+console.log("API_BASE:", API_BASE)
+
 function InvoiceView() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -13,6 +16,7 @@ function InvoiceView() {
   const [error, setError] = useState("")
   const [printing, setPrinting] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  
 
   const money = (v) => `$${Number(v || 0).toFixed(2)}`
 
@@ -162,7 +166,7 @@ function InvoiceView() {
           <div className="flex items-start gap-4 min-w-0">
             {invoice.logo_url ? (
               <img
-                src={"http://localhost:5000" + invoice.logo_url}
+                src={API_BASE + invoice.logo_url}
                 alt="Shop Logo"
                 className="w-16 h-16 sm:w-20 sm:h-20 object-contain border border-slate-200 rounded-xl shrink-0 bg-white"
               />
