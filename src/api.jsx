@@ -1,7 +1,8 @@
 import axios from "axios"
+const API_URL = import.meta.env.VITE_API_URL // ensure env vars are loaded
 
 const api = axios.create({
-  baseURL: "http://159.203.43.122:5000/api",
+  baseURL: API_URL,
 })
 
 api.interceptors.request.use((config) => {
