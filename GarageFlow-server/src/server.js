@@ -8,6 +8,8 @@ import customerRoutes from "./routes/customerRoutes.js"
 import vehicleRoutes from "./routes/vehicleRoutes.js"
 import dashboardRoutes from "./routes/dashboardRoutes.js"
 import shopRoutes from "./routes/shopRoutes.js"
+import path from "path"
+import { fileURLToPath } from "url"
 
 const app = express()
 
@@ -48,9 +50,12 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many login attempts. Please try again later." },
 })
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 // ---------------- ROUTES ----------------
-app.use("/uploads", express.static("uploads"))
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")))
 
 app.use("/api/auth", authLimiter, authRoutes)
 
