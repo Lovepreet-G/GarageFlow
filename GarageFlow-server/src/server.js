@@ -55,7 +55,7 @@ const __dirname = path.dirname(__filename);
 
 
 // ---------------- ROUTES ----------------
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")))
+app.use("/uploads", express.static(path.join(__dirname, "/uploads"))); // serve static files from uploads folder
 
 app.use("/api/auth", authLimiter, authRoutes)
 
