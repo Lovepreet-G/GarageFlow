@@ -11,6 +11,9 @@ import shopRoutes from "./routes/shopRoutes.js"
 import path from "path"
 import { fileURLToPath } from "url"
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const app = express()
 
 app.set("trust proxy", 1) // ✅ important if deployed behind proxy (Render, Railway, etc.)
@@ -50,12 +53,9 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many login attempts. Please try again later." },
 })
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 
 // ---------------- ROUTES ----------------
-app.use("/uploads", express.static(path.join(__dirname, "/uploads"))); // serve static files from uploads folder
+app.use("/api/uploads", express.static(path.join(__dirname, "../uploads")))
 
 app.use("/api/auth", authLimiter, authRoutes)
 
