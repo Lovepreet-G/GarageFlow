@@ -18,7 +18,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-<<<<<<< HEAD
 // ✅ Auto-logout on expired / invalid token
 api.interceptors.response.use(
   (response) => response,
@@ -40,6 +39,4 @@ api.interceptors.response.use(
   }
 )
 
-=======
->>>>>>> 1498db2 (fixed git error)
 export default api
