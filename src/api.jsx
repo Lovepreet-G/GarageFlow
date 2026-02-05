@@ -7,13 +7,18 @@ const api = axios.create({
 })
 
 // Attach token on every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token")
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
 
-// Auto-logout on expired/invalid token (401)
+// ✅ Auto-logout on expired / invalid token
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -22,9 +27,9 @@ api.interceptors.response.use(
     if (status === 401) {
       // clear auth
       localStorage.removeItem("token")
-      localStorage.removeItem("shop") // only if you store shop/user info
+      localStorage.removeItem("shop") // if you store shop info
 
-      // redirect to login (works even outside components)
+      // redirect to login
       if (window.location.pathname !== "/login") {
         window.location.href = "/login"
       }
