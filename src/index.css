@@ -4,6 +4,10 @@
 
 
 /* ---- Global Layout Reset ---- */
+html
+{
+  color-scheme: light;
+}
 html,
 body,
 #root {
