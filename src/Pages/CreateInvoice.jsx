@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom"
 import api from "../api"
 
 function isValidEmail(email) {
-  return (
-    /^[^\s@]+@[^\s@]+\.[^\s@]+\.[^\s@]+$/.test(email) ||
-    /^[^\s@]+@[^\s@]+\.[^\s@]+\.[^\s@]+$/.test(email)
-  )
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
 function normalizePhone(phone) {
   return phone.replace(/[^\d]/g, "")
 }
