@@ -19,10 +19,11 @@ function Employees() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     mobile: "",
     email: "",
-    pay_rate: "",
+    hourly_rate: "",
     job_type: "Part-time",
     sin_number: "",
   })
@@ -55,13 +56,13 @@ function Employees() {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ name: "", mobile: "", email: "", pay_rate: "", job_type: "Part-time", sin_number: "" })
+    setForm({ first_name: "", last_name: "", mobile: "", email: "", hourly_rate: "", job_type: "Part-time", sin_number: "" })
     setShowForm(true)
   }
 
   const openEdit = (r) => {
     setEditing(r.id)
-    setForm({ name: r.name || "", mobile: r.mobile || "", email: r.email || "", pay_rate: r.pay_rate || "", job_type: r.job_type || "Part-time", sin_number: r.sin_number || "" })
+    setForm({ first_name: r.first_name || "", last_name: r.last_name || "", mobile: r.mobile || "", email: r.email || "", hourly_rate: r.hourly_rate || "", job_type: r.job_type || "Part-time", sin_number: r.sin_number || "" })
     setShowForm(true)
   }
 
@@ -189,11 +190,11 @@ function Employees() {
                 <tr><td colSpan={7} className="p-4 text-slate-400">No employees</td></tr>
               ) : rows.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="p-3 font-semibold">{r.name}</td>
+                  <td className="p-3 font-semibold">{`${r.first_name || ''} ${r.last_name || ''}`.trim()}</td>
                   <td className="p-3 text-slate-500">{r.mobile}</td>
                   <td className="p-3 text-slate-500">{r.email}</td>
                   <td className="p-3">{r.job_type}</td>
-                  <td className="p-3">{r.pay_rate}</td>
+                  <td className="p-3">{r.hourly_rate}</td>
                   <td className="p-3">{r.status}</td>
                   <td className="p-3 text-right">
                     <button onClick={() => openEdit(r)} className="px-3 py-1 rounded-xl border mr-2">Edit</button>
@@ -236,7 +237,7 @@ function Employees() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Schedule - {schedEmployee.name}</h3>
+              <h3 className="text-lg font-bold">Schedule - {`${schedEmployee.first_name || ''} ${schedEmployee.last_name || ''}`.trim()}</h3>
               <div className="flex items-center gap-2">
                 <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} className="border p-2 rounded" />
                 <button onClick={loadSchedule} className="px-3 py-2 rounded border">Load</button>

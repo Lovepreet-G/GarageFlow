@@ -47,7 +47,7 @@ export default function EmployeeForm({ initial = {}, onSaved }) {
           <option value="1">Owner</option>
           <option value="2">Admin</option>
           <option value="3">Manager</option>
-          <option value="4">Mechanic</option>
+          <option value="4">Technician</option>
           <option value="5">ServiceAdvisor</option>
         </select>
         <input value={form.hourly_rate} onChange={e=>setForm({...form, hourly_rate:e.target.value})} className="border p-2 rounded" placeholder="Hourly rate" />

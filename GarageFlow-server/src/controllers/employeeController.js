@@ -15,10 +15,10 @@ export const listEmployees = async (req, res) => {
   const q = (`%${(req.query.q || "").trim()}%`).replaceAll('%', '%%') // escape percent
   try {
     const [rows] = await pool.query(
-      `SELECT id, name, mobile, email, pay_rate, job_type, sin_number, status, created_at, updated_at
+      `SELECT id, first_name, last_name, mobile, email, hourly_rate, job_type, role_id, department_id, sin_number, status, created_at, updated_at
        FROM employees
        WHERE shop_id = ? AND (deleted_at IS NULL)
-       AND (name LIKE ? OR email LIKE ? OR mobile LIKE ?)
+       AND (CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ? OR email LIKE ? OR mobile LIKE ?)
        ORDER BY id DESC`,
       [shopId, q, q, q]
     )
@@ -35,7 +35,7 @@ export const getEmployeeById = async (req, res) => {
   const { id } = req.params
   try {
     const [rows] = await pool.query(
-      `SELECT id, name, mobile, email, pay_rate, job_type, sin_number, status, created_at, updated_at, deleted_at
+      `SELECT id, first_name, last_name, mobile, email, hourly_rate, job_type, role_id, department_id, sin_number, status, created_at, updated_at, deleted_at
        FROM employees WHERE id = ? AND shop_id = ?`,
       [id, shopId]
     )
@@ -50,13 +50,13 @@ export const getEmployeeById = async (req, res) => {
 // POST /api/employees
 export const createEmployee = async (req, res) => {
   const shopId = req.shop.id
-  const { name, mobile, email, pay_rate, job_type, sin_number } = req.body
-  if (!name) return res.status(400).json({ message: "Name required" })
+  const { first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type } = req.body
+  if (!first_name) return res.status(400).json({ message: "First name required" })
   try {
     const [result] = await pool.query(
-      `INSERT INTO employees (shop_id, name, mobile, email, pay_rate, job_type, sin_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [shopId, name, mobile || null, email || null, pay_rate || null, job_type || null, sin_number || null]
+      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null, job_type || null]
     )
     res.status(201).json({ id: result.insertId })
   } catch (e) {
@@ -69,18 +69,18 @@ export const createEmployee = async (req, res) => {
 export const updateEmployee = async (req, res) => {
   const shopId = req.shop.id
   const { id } = req.params
-  const { name, mobile, email, pay_rate, job_type, sin_number, status } = req.body
+  const { first_name, last_name, mobile, email, hourly_rate, role_id, department_id, job_type, sin_number, status } = req.body
   try {
     // ensure employee belongs to shop
     const [check] = await pool.query(`SELECT id FROM employees WHERE id = ? AND shop_id = ?`, [id, shopId])
     if (!check.length) return res.status(404).json({ message: "Employee not found" })
 
     const [result] = await pool.query(
-      `UPDATE employees SET name = COALESCE(?, name), mobile = COALESCE(?, mobile), email = COALESCE(?, email),
-         pay_rate = COALESCE(?, pay_rate), job_type = COALESCE(?, job_type), sin_number = COALESCE(?, sin_number),
+      `UPDATE employees SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), mobile = COALESCE(?, mobile), email = COALESCE(?, email),
+         hourly_rate = COALESCE(?, hourly_rate), role_id = COALESCE(?, role_id), department_id = COALESCE(?, department_id), job_type = COALESCE(?, job_type), sin_number = COALESCE(?, sin_number),
          status = COALESCE(?, status)
        WHERE id = ? AND shop_id = ?`,
-      [name, mobile, email, pay_rate, job_type, sin_number, status, id, shopId]
+      [first_name, last_name, mobile, email, hourly_rate, role_id, department_id, job_type, sin_number, status, id, shopId]
     )
 
     // if status indicates termination, set deleted_at
@@ -173,7 +173,7 @@ export const schedulePdf = async (req, res) => {
   if (!weekStart) return res.status(400).json({ message: 'weekStart required' })
   try {
     const [r] = await pool.query(
-      `SELECT s.entries, e.name FROM employee_schedules s JOIN employees e ON e.id = s.employee_id
+      `SELECT s.entries, CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) AS name FROM employee_schedules s JOIN employees e ON e.id = s.employee_id
        WHERE s.shop_id = ? AND s.employee_id = ? AND s.week_start = ?`,
       [shopId, id, weekStart]
     )

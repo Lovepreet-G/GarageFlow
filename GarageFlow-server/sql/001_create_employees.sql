@@ -4,11 +4,14 @@
 CREATE TABLE IF NOT EXISTS `employees` (
   `id` int NOT NULL AUTO_INCREMENT,
   `shop_id` int NOT NULL,
-  `name` varchar(255) NOT NULL,
+  `first_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) DEFAULT NULL,
   `mobile` varchar(50) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
-  `pay_rate` decimal(10,2) DEFAULT NULL,
+  `hourly_rate` decimal(10,2) DEFAULT NULL,
   `job_type` varchar(32) DEFAULT 'Part-time',
+  `role_id` int DEFAULT NULL,
+  `department_id` int DEFAULT NULL,
   `sin_number` varchar(50) DEFAULT NULL,
   `status` varchar(32) DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -83,12 +86,4 @@ CREATE TABLE IF NOT EXISTS `roles` (
 
 INSERT IGNORE INTO roles (id, name) VALUES
 (1, 'Owner'), (2, 'Admin'), (3, 'Manager'), (4, 'Technician'), (5, 'ServiceAdvisor');
-
--- enhance employees table: add department_id, role_id, first_name, last_name, hourly_rate
-ALTER TABLE employees
-  ADD COLUMN IF NOT EXISTS department_id int DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS role_id int DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS first_name varchar(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS last_name varchar(255) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS hourly_rate decimal(10,2) DEFAULT NULL;
 
