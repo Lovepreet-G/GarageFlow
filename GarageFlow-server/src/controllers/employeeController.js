@@ -54,14 +54,14 @@ export const createEmployee = async (req, res) => {
   if (!first_name) return res.status(400).json({ message: "First name required" })
   try {
     const [result] = await pool.query(
-      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null,job_type || null, status || 'active'] 
+      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null,job_type || null] 
     )
     res.status(201).json({ id: result.insertId })
   } catch (e) {
     console.error(e)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Server insert error" })
   }
 }
 
