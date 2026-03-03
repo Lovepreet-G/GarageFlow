@@ -50,13 +50,13 @@ export const getEmployeeById = async (req, res) => {
 // POST /api/employees
 export const createEmployee = async (req, res) => {
   const shopId = req.shop.id
-  const { first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type } = req.body
+  const { first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type ,created_at } = req.body
   if (!first_name) return res.status(400).json({ message: "First name required" })
   try {
     const [result] = await pool.query(
-      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null,job_type || null] 
+      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null,job_type || null, created_at || null] 
     )
     res.status(201).json({ id: result.insertId })
   } catch (e) {

@@ -9,9 +9,7 @@ function Sidebar({ open, onClose }) {
   const linkClass = ({ isActive }) =>
     [
       "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold",
-      isActive
-        ? "bg-slate-900 text-white shadow"
-        : "text-slate-600 hover:bg-slate-100",
+      isActive ? "bg-slate-900 text-white shadow" : "text-slate-600 hover:bg-slate-100",
     ].join(" ")
 
   const goCreate = () => {
@@ -21,7 +19,6 @@ function Sidebar({ open, onClose }) {
 
   return (
     <>
-      {/* Mobile overlay */}
       <div
         className={[
           "fixed inset-0 z-40 bg-black/40 lg:hidden transition-opacity",
@@ -30,7 +27,6 @@ function Sidebar({ open, onClose }) {
         onClick={onClose}
       />
 
-      {/* Sidebar panel */}
       <aside
         className={[
           "fixed top-16 left-0 z-50 h-[calc(100vh-64px)] w-64 bg-white border-r",
@@ -40,7 +36,7 @@ function Sidebar({ open, onClose }) {
           "transition-transform duration-200",
         ].join(" ")}
       >
-        {/* ✅ Scrollable area */}
+        {/* ✅ Scrollable nav */}
         <nav className="space-y-2 overflow-y-auto flex-1 pr-1">
           <NavLink to="/dashboard" className={linkClass} onClick={onClose}>
             <span>▦</span> <span>DASHBOARD</span>
@@ -58,7 +54,6 @@ function Sidebar({ open, onClose }) {
             <span>👤</span> <span>PROFILE</span>
           </NavLink>
 
-          {/* Employee Management dropdown */}
           <div className="border-t pt-3">
             <button
               type="button"
@@ -71,7 +66,7 @@ function Sidebar({ open, onClose }) {
             </button>
 
             <div className={["mt-2 space-y-1", openManage ? "block" : "hidden"].join(" ")}>
-              {/* ✅ end prevents /employees being active on /employees/new */}
+              {/* ✅ end fixes highlight bug */}
               <NavLink to="/employees" end className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Employees</span>
               </NavLink>
@@ -86,7 +81,6 @@ function Sidebar({ open, onClose }) {
             </div>
           </div>
 
-          {/* Schedule dropdown */}
           <div className="pt-3">
             <button
               type="button"
@@ -112,7 +106,6 @@ function Sidebar({ open, onClose }) {
           </div>
         </nav>
 
-        {/* Bottom button (stays visible) */}
         <button
           type="button"
           onClick={goCreate}

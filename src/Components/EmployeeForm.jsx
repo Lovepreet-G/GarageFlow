@@ -3,22 +3,24 @@ import departmentsApi from "../api/departmentsApi"
 import employeesApi from "../api/employeesApi"
 
 export default function EmployeeForm({ initial, onSaved, onCancel }) {
-  // ✅ Make initial stable (no new {} each render)
   const safeInitial = useMemo(() => initial || null, [initial])
+
+  const [departments, setDepartments] = useState([])
+  const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
     email: "",
-    phone: "",
+    mobile: "",
     sin_number: "",
     department_id: "",
     role_id: "",
+    job_type: "Part-time",
     hourly_rate: "",
+    // ✅ Start date input – will be sent as created_at
+    created_at: "", // YYYY-MM-DD
   })
-
-  const [departments, setDepartments] = useState([])
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     departmentsApi
@@ -27,35 +29,37 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
       .catch(() => {})
   }, [])
 
-  // ✅ Only run when editing a different employee (id changes)
+  // ✅ stable dependency prevents maximum update depth
   useEffect(() => {
     if (!safeInitial) {
-      // Add mode: keep defaults (no loop)
       setForm({
         first_name: "",
         last_name: "",
         email: "",
-        phone: "",
+        mobile: "",
         sin_number: "",
         department_id: "",
         role_id: "",
+        job_type: "Part-time",
         hourly_rate: "",
+        created_at: "",
       })
       return
     }
 
-    // Edit mode
     setForm({
       first_name: safeInitial.first_name || "",
       last_name: safeInitial.last_name || "",
       email: safeInitial.email || "",
-      phone: safeInitial.phone || safeInitial.mobile || "",
+      mobile: safeInitial.mobile || "",
       sin_number: safeInitial.sin_number || "",
       department_id: safeInitial.department_id || "",
       role_id: safeInitial.role_id || "",
+      job_type: safeInitial.job_type || "Part-time",
       hourly_rate: safeInitial.hourly_rate ?? "",
+      created_at: safeInitial.created_at ? String(safeInitial.created_at).slice(0, 10) : "",
     })
-  }, [safeInitial?.id]) // ✅ key fix: stable dependency
+  }, [safeInitial?.id])
 
   const submit = async () => {
     try {
@@ -64,12 +68,25 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         return alert("SIN number is required (9 digits)")
       }
 
+      // ✅ Start date required (your requirement)
+      if (!form.created_at) {
+        return alert("Start date is required")
+      }
+
       setSaving(true)
 
+      const payload = {
+        ...form,
+        sin_number: sinDigits,
+        department_id: form.department_id || null,
+        role_id: form.role_id || null,
+        hourly_rate: form.hourly_rate === "" ? null : form.hourly_rate,
+      }
+
       if (safeInitial?.id) {
-        await employeesApi.updateEmployee(safeInitial.id, form)
+        await employeesApi.updateEmployee(safeInitial.id, payload)
       } else {
-        await employeesApi.createEmployee(form)
+        await employeesApi.createEmployee(payload)
       }
 
       onSaved && onSaved()
@@ -103,19 +120,29 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
           placeholder="Email"
         />
         <input
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          value={form.mobile}
+          onChange={(e) => setForm({ ...form, mobile: e.target.value })}
           className="border p-2 rounded"
-          placeholder="Phone"
+          placeholder="Mobile"
         />
 
-        {/* ✅ SIN */}
         <input
           value={form.sin_number}
           onChange={(e) => setForm({ ...form, sin_number: e.target.value })}
           className="border p-2 rounded"
           placeholder="SIN number (9 digits)"
         />
+
+        {/* ✅ Start date */}
+        <div>
+          <label className="text-xs text-slate-500">Start Date</label>
+          <input
+            type="date"
+            value={form.created_at}
+            onChange={(e) => setForm({ ...form, created_at: e.target.value })}
+            className="border p-2 rounded w-full"
+          />
+        </div>
 
         <select
           value={form.department_id}
@@ -141,6 +168,15 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
           <option value="3">Manager</option>
           <option value="4">Technician</option>
           <option value="5">ServiceAdvisor</option>
+        </select>
+
+        <select
+          value={form.job_type}
+          onChange={(e) => setForm({ ...form, job_type: e.target.value })}
+          className="border p-2 rounded"
+        >
+          <option value="Part-time">Part-time</option>
+          <option value="Full-time">Full-time</option>
         </select>
 
         <input
