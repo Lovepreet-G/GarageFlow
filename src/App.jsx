@@ -11,6 +11,13 @@ import Register from "./Pages/Register"
 import Home from "./Pages/Home"
 import Invoices from "./Pages/Invoices"
 import Customers from "./Pages/Customers"
+import Employees from "./Pages/Employees"
+import EmployeesNew from "./Pages/EmployeesNew"
+import EmployeeProfile from "./Pages/EmployeeProfile"
+import Departments from "./Pages/Departments"
+import ScheduleCreate from "./Pages/ScheduleCreate"
+import ScheduleView from "./Pages/ScheduleView"
+import Attendance from "./Pages/Attendance"
 import CreateInvoice from "./Pages/CreateInvoice"
 import InvoiceView from "./Pages/InvoiceView"
 import Profile from "./Pages/Profile"
@@ -93,6 +100,38 @@ export default function App() {
               <Customers />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute>
+              <Employees />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees/new"
+          element={<ProtectedRoute><EmployeesNew /></ProtectedRoute>}
+        />
+        <Route
+          path="/employees/:id"
+          element={<ProtectedRoute><EmployeeProfile /></ProtectedRoute>}
+        />
+        <Route
+          path="/departments"
+          element={<ProtectedRoute><Departments /></ProtectedRoute>}
+        />
+        <Route
+          path="/schedule/create"
+          element={<ProtectedRoute><ScheduleCreate /></ProtectedRoute>}
+        />
+        <Route
+          path="/schedule"
+          element={<ProtectedRoute><ScheduleView /></ProtectedRoute>}
+        />
+        <Route
+          path="/attendance"
+          element={<ProtectedRoute><Attendance /></ProtectedRoute>}
         />
         <Route
           path="/create-invoice"

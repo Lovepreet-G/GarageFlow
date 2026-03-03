@@ -1,7 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom"
+import { useState } from "react"
 
 function Sidebar({ open, onClose }) {
   const navigate = useNavigate()
+  const [openManage, setOpenManage] = useState(false)
+  const [openSchedule, setOpenSchedule] = useState(false)
 
   const linkClass = ({ isActive }) =>
     [
@@ -55,6 +58,56 @@ function Sidebar({ open, onClose }) {
           <NavLink to="/profile" className={linkClass} onClick={onClose}>
             <span>👤</span> <span>PROFILE</span>
           </NavLink>
+
+          {/* Employee Management dropdown */}
+          <div className="border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setOpenManage((s) => !s)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            >
+              <span>👥</span>
+              <span>EMPLOYEE MANAGEMENT</span>
+              <span className="ml-auto">▾</span>
+            </button>
+
+            <div className={["mt-2 space-y-1", openManage ? "block" : "hidden"].join(" ")}> 
+              <NavLink to="/employees" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Employees</span>
+              </NavLink>
+              <NavLink to="/employees/new" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Add Employee</span>
+              </NavLink>
+              <NavLink to="/departments" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Departments</span>
+              </NavLink>
+            </div>
+          </div>
+
+          {/* Schedule dropdown */}
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={() => setOpenSchedule((s) => !s)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            >
+              <span>📅</span>
+              <span>SCHEDULE</span>
+              <span className="ml-auto">▾</span>
+            </button>
+
+            <div className={["mt-2 space-y-1", openSchedule ? "block" : "hidden"].join(" ")}>
+              <NavLink to="/schedule/create" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Create Schedule</span>
+              </NavLink>
+              <NavLink to="/schedule" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>View Schedule</span>
+              </NavLink>
+              <NavLink to="/attendance" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Attendance</span>
+              </NavLink>
+            </div>
+          </div>
 
           <button
             type="button"
