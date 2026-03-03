@@ -35,14 +35,13 @@ function Sidebar({ open, onClose }) {
         className={[
           "fixed top-16 left-0 z-50 h-[calc(100vh-64px)] w-64 bg-white border-r",
           "p-4 flex flex-col",
-          // desktop always visible
           "lg:translate-x-0",
-          // mobile drawer
           open ? "translate-x-0" : "-translate-x-full",
           "transition-transform duration-200",
         ].join(" ")}
       >
-        <nav className="space-y-2">
+        {/* ✅ Scrollable area */}
+        <nav className="space-y-2 overflow-y-auto flex-1 pr-1">
           <NavLink to="/dashboard" className={linkClass} onClick={onClose}>
             <span>▦</span> <span>DASHBOARD</span>
           </NavLink>
@@ -71,13 +70,16 @@ function Sidebar({ open, onClose }) {
               <span className="ml-auto">▾</span>
             </button>
 
-            <div className={["mt-2 space-y-1", openManage ? "block" : "hidden"].join(" ")}> 
-              <NavLink to="/employees" className={linkClass} onClick={onClose}>
+            <div className={["mt-2 space-y-1", openManage ? "block" : "hidden"].join(" ")}>
+              {/* ✅ end prevents /employees being active on /employees/new */}
+              <NavLink to="/employees" end className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Employees</span>
               </NavLink>
+
               <NavLink to="/employees/new" className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Add Employee</span>
               </NavLink>
+
               <NavLink to="/departments" className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Departments</span>
               </NavLink>
@@ -108,17 +110,16 @@ function Sidebar({ open, onClose }) {
               </NavLink>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={goCreate}
-            className="w-full mt-4 px-4 py-3 rounded-2xl bg-cyan-600 text-white font-bold hover:bg-cyan-700 shadow"
-          >
-            CREATE +
-          </button>
         </nav>
 
-        
+        {/* Bottom button (stays visible) */}
+        <button
+          type="button"
+          onClick={goCreate}
+          className="w-full mt-4 px-4 py-3 rounded-2xl bg-cyan-600 text-white font-bold hover:bg-cyan-700 shadow"
+        >
+          CREATE +
+        </button>
       </aside>
     </>
   )

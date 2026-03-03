@@ -54,9 +54,9 @@ export const createEmployee = async (req, res) => {
   if (!first_name) return res.status(400).json({ message: "First name required" })
   try {
     const [result] = await pool.query(
-      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null, job_type || null]
+      `INSERT INTO employees (shop_id, first_name, last_name, mobile, email, hourly_rate, role_id, department_id, sin_number, job_type, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
+      [shopId, first_name, last_name || null, mobile || null, email || null, hourly_rate || null, role_id || null, department_id || null, sin_number || null,job_type || null, status || 'active'] 
     )
     res.status(201).json({ id: result.insertId })
   } catch (e) {
@@ -103,7 +103,7 @@ export const softDeleteEmployee = async (req, res) => {
     const [check] = await pool.query(`SELECT id FROM employees WHERE id = ? AND shop_id = ?`, [id, shopId])
     if (!check.length) return res.status(404).json({ message: "Employee not found" })
 
-    await pool.query(`UPDATE employees SET status = 'Terminated', deleted_at = NOW() WHERE id = ? AND shop_id = ?`, [id, shopId])
+    await pool.query(`UPDATE employees SET status = 'inactive', deleted_at = NOW() WHERE id = ? AND shop_id = ?`, [id, shopId])
     res.json({ success: true })
   } catch (e) {
     console.error(e)
