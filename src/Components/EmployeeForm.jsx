@@ -11,7 +11,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
     last_name: "",
     email: "",
     phone: "",
-    sin: "",
+    sin_number: "",
     department_id: "",
     role_id: "",
     hourly_rate: "",
@@ -36,7 +36,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         last_name: "",
         email: "",
         phone: "",
-        sin: "",
+        sin_number: "",
         department_id: "",
         role_id: "",
         hourly_rate: "",
@@ -50,7 +50,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
       last_name: safeInitial.last_name || "",
       email: safeInitial.email || "",
       phone: safeInitial.phone || safeInitial.mobile || "",
-      sin: safeInitial.sin || "",
+      sin_number: safeInitial.sin_number || "",
       department_id: safeInitial.department_id || "",
       role_id: safeInitial.role_id || "",
       hourly_rate: safeInitial.hourly_rate ?? "",
@@ -59,7 +59,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
 
   const submit = async () => {
     try {
-      const sinDigits = String(form.sin || "").replace(/\D/g, "")
+      const sinDigits = String(form.sin_number || "").replace(/\D/g, "")
       if (!sinDigits || sinDigits.length !== 9) {
         return alert("SIN number is required (9 digits)")
       }
@@ -111,8 +111,8 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
 
         {/* ✅ SIN */}
         <input
-          value={form.sin}
-          onChange={(e) => setForm({ ...form, sin: e.target.value })}
+          value={form.sin_number}
+          onChange={(e) => setForm({ ...form, sin_number: e.target.value })}
           className="border p-2 rounded"
           placeholder="SIN number (9 digits)"
         />
