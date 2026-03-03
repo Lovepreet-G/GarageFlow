@@ -72,7 +72,7 @@ export default function EmployeeProfile() {
           <div>
             <strong>SIN</strong>
             <div className="text-slate-600">
-              {data.sin ? `***-***-${String(data.sin).slice(-3)}` : ''}
+              {data.sin_number ? `***-***-${String(data.sin_number).slice(-3)}` : ''}
             </div>
           </div>
 

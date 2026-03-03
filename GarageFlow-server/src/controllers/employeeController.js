@@ -17,7 +17,7 @@ export const listEmployees = async (req, res) => {
     const [rows] = await pool.query(
       `SELECT id, first_name, last_name, mobile, email, hourly_rate, job_type, role_id, department_id, sin_number, status, created_at, updated_at
        FROM employees
-       WHERE shop_id = ? AND (deleted_at IS NULL)
+       WHERE shop_id = ?
        AND (CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ? OR email LIKE ? OR mobile LIKE ?)
        ORDER BY id DESC`,
       [shopId, q, q, q]
