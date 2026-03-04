@@ -200,7 +200,6 @@ export const updateEmployee = async (req, res) => {
       ]
     )
 
-
     res.json({ success: true })
   } catch (e) {
     console.error(e)

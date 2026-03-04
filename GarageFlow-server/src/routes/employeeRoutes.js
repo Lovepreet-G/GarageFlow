@@ -6,9 +6,9 @@ import {
   createEmployee,
   updateEmployee,
   softDeleteEmployee,
-  listSchedules,
-  createSchedules,
-  schedulePdf,
+//   listSchedules,
+//   createSchedules,
+//   schedulePdf,
 } from "../controllers/employeeController.js"
 
 const router = express.Router()
@@ -22,8 +22,8 @@ router.patch("/:id", updateEmployee)
 router.delete("/:id", softDeleteEmployee)
 
 // schedules
-router.get("/:id/schedules", listSchedules)
-router.post("/:id/schedules", createSchedules)
-router.get("/:id/schedule/pdf", schedulePdf)
+// router.get("/:id/schedules", listSchedules)
+// router.post("/:id/schedules", createSchedules)
+// router.get("/:id/schedule/pdf", schedulePdf)
 
 export default router
