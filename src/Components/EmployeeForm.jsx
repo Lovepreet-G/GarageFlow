@@ -1,6 +1,34 @@
-import { useEffect, useMemo, useState } from "react"
-import api from "../api"
+import { useEffect, useMemo, useRef, useState } from "react"
 import departmentsApi from "../api/departmentsApi"
+import employeesApi from "../api/employeesApi"
+
+// ---- Phone helpers (no +1) ----
+const digitsOnly = (v) => String(v || "").replace(/\D/g, "")
+
+const formatPhone = (value) => {
+  const digits = digitsOnly(value).slice(0, 10)
+
+  const a = digits.slice(0, 3)
+  const b = digits.slice(3, 6)
+  const c = digits.slice(6, 10)
+
+  if (digits.length > 6) return `(${a}) ${b}-${c}`
+  if (digits.length > 3) return `(${a}) ${b}`
+  if (digits.length > 0) return `(${a}`
+  return ""
+}
+
+// Given formatted string and a number of digits that should be "before cursor",
+// return cursor position in formatted string.
+const caretPosFromDigits = (formatted, digitCount) => {
+  if (!digitCount) return 0
+  let seen = 0
+  for (let i = 0; i < formatted.length; i++) {
+    if (/\d/.test(formatted[i])) seen++
+    if (seen >= digitCount) return i + 1
+  }
+  return formatted.length
+}
 
 export default function EmployeeForm({ initial, onSaved, onCancel }) {
   const safeInitial = useMemo(() => initial || null, [initial])
@@ -8,6 +36,9 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
 
   const [departments, setDepartments] = useState([])
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const mobileRef = useRef(null)
 
   const [form, setForm] = useState({
     first_name: "",
@@ -20,7 +51,6 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
     job_type: "Part-time",
     created_at: "",
 
-    // ✅ Address fields
     address_street: "",
     address_unit: "",
     address_city: "",
@@ -56,6 +86,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         address_country: "",
         address_postal_code: "",
       })
+      setErrors({})
       return
     }
 
@@ -77,122 +108,210 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
       address_country: safeInitial.address_country || "",
       address_postal_code: safeInitial.address_postal_code || "",
     })
+    setErrors({})
   }, [safeInitial?.id])
 
-  const submit = async () => {
-    try {
-      const sinDigits = String(form.sin_number || "").replace(/\D/g, "")
-      if (!sinDigits || sinDigits.length !== 9) return alert("SIN is required (9 digits)")
-      if (!isEdit && !form.created_at) return alert("Start date is required")
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => {
+      if (!prev[key]) return prev
+      const copy = { ...prev }
+      delete copy[key]
+      return copy
+    })
+  }
 
+  const setFormError = (msg) => {
+    setErrors((prev) => ({ ...prev, _form: msg }))
+  }
+
+  const validate = () => {
+    const next = {}
+
+    if (!String(form.first_name || "").trim()) {
+      next.first_name = "First name is required"
+    }
+
+    const mobDigits = digitsOnly(form.mobile)
+    if (!mobDigits) next.mobile = "Mobile is required"
+    else if (mobDigits.length < 10) next.mobile = "Mobile must be at least 10 digits"
+
+    // Required on both create + edit (edit is disabled but must be present)
+    if (!form.created_at) next.created_at = "Start date is required"
+
+    if (String(form.hourly_rate ?? "").trim() === "") next.hourly_rate = "Pay rate is required"
+    else if (!Number.isFinite(Number(form.hourly_rate))) next.hourly_rate = "Pay rate must be a number"
+
+    return next
+  }
+
+  // ---- Mobile input (format + stable cursor + paste support) ----
+  const handleMobileChange = (e) => {
+    const input = e.target
+    const raw = input.value
+    const caret = input.selectionStart ?? raw.length
+
+    // how many digits were before caret in the raw input?
+    const rawBeforeCaret = raw.slice(0, caret)
+    const digitsBeforeCaret = digitsOnly(rawBeforeCaret).length
+
+    const formatted = formatPhone(raw)
+    setField("mobile", formatted)
+
+    // restore caret based on digits count
+    requestAnimationFrame(() => {
+      const el = mobileRef.current
+      if (!el) return
+      const pos = caretPosFromDigits(formatted, digitsBeforeCaret)
+      el.setSelectionRange(pos, pos)
+    })
+  }
+
+  const handleMobilePaste = (e) => {
+    e.preventDefault()
+    const text = e.clipboardData?.getData("text") || ""
+    const formatted = formatPhone(text)
+    setField("mobile", formatted)
+
+    requestAnimationFrame(() => {
+      const el = mobileRef.current
+      if (!el) return
+      const d = digitsOnly(formatted).length
+      const pos = caretPosFromDigits(formatted, d)
+      el.setSelectionRange(pos, pos)
+    })
+  }
+
+  const submit = async () => {
+    const nextErrors = validate()
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length) return
+
+    try {
       setSaving(true)
 
       const payload = {
-        first_name: form.first_name,
-        last_name: form.last_name || null,
-        email: form.email || null,
-        mobile: form.mobile || null,
-        sin_number: sinDigits,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name ? form.last_name.trim() : null,
+        email: form.email ? form.email.trim() : null,
+        mobile: form.mobile ? form.mobile.trim() : null,
+
+        // ✅ SIN optional (no validation)
+        sin_number: form.sin_number ? form.sin_number.trim() : null,
+
         department_id: form.department_id || null,
         hourly_rate: form.hourly_rate === "" ? null : form.hourly_rate,
         job_type: form.job_type || null,
 
-        // ✅ Address payload
-        address_street: form.address_street || null,
-        address_unit: form.address_unit || null,
-        address_city: form.address_city || null,
-        address_province: form.address_province || null,
-        address_country: form.address_country || null,
-        address_postal_code: form.address_postal_code || null,
-
-        ...(isEdit ? {} : { created_at: form.created_at }),
+        address_street: form.address_street ? form.address_street.trim() : null,
+        address_unit: form.address_unit ? form.address_unit.trim() : null,
+        address_city: form.address_city ? form.address_city.trim() : null,
+        address_province: form.address_province ? form.address_province.trim() : null,
+        address_country: form.address_country ? form.address_country.trim() : null,
+        address_postal_code: form.address_postal_code ? form.address_postal_code.trim() : null,
       }
 
-      if (isEdit) await api.patch(`/employees/${safeInitial.id}`, payload)
-      else await api.post(`/employees`, payload)
+      if (isEdit) {
+        // created_at disabled on edit — don’t send
+        await employeesApi.updateEmployee(safeInitial.id, payload)
+      } else {
+        await employeesApi.createEmployee({ ...payload, created_at: form.created_at })
+      }
 
       onSaved && onSaved()
     } catch (e) {
-      console.error(e)
-      alert(e?.response?.data?.message || "Error saving employee")
+      setFormError(e?.response?.data?.message || "Something went wrong. Please try again.")
     } finally {
       setSaving(false)
     }
   }
 
-  const L = ({ children }) => <label className="text-xs text-slate-500">{children}</label>
+  const Label = ({ children }) => <label className="text-xs text-slate-500">{children}</label>
+  const ErrorText = ({ msg }) => (msg ? <div className="text-xs text-rose-600 mt-1">{msg}</div> : null)
 
   return (
     <div className="space-y-4">
-      {/* Basic info */}
+      {errors._form && (
+        <div className="border border-rose-200 bg-rose-50 text-rose-700 rounded-xl p-3 text-sm">
+          {errors._form}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <L>First Name</L>
+          <Label>First Name *</Label>
           <input
             value={form.first_name}
-            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+            onChange={(e) => setField("first_name", e.target.value)}
             className="border p-2 rounded w-full"
             placeholder="First name"
           />
+          <ErrorText msg={errors.first_name} />
         </div>
 
         <div>
-          <L>Last Name</L>
+          <Label>Last Name</Label>
           <input
             value={form.last_name}
-            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+            onChange={(e) => setField("last_name", e.target.value)}
             className="border p-2 rounded w-full"
             placeholder="Last name"
           />
         </div>
 
         <div>
-          <L>Email</L>
+          <Label>Email</Label>
           <input
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={(e) => setField("email", e.target.value)}
             className="border p-2 rounded w-full"
             placeholder="Email"
           />
         </div>
 
         <div>
-          <L>Mobile</L>
+          <Label>Mobile *</Label>
           <input
+            ref={mobileRef}
+            inputMode="numeric"
+            autoComplete="tel"
             value={form.mobile}
-            onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+            onChange={handleMobileChange}
+            onPaste={handleMobilePaste}
             className="border p-2 rounded w-full"
-            placeholder="Mobile"
+            placeholder="(647) 123-4567"
           />
+          <ErrorText msg={errors.mobile} />
         </div>
 
         <div>
-          <L>SIN Number</L>
+          <Label>SIN Number</Label>
           <input
             value={form.sin_number}
-            onChange={(e) => setForm({ ...form, sin_number: e.target.value })}
+            onChange={(e) => setField("sin_number", e.target.value)}
             className="border p-2 rounded w-full"
-            placeholder="SIN (9 digits)"
+            placeholder="SIN (optional)"
           />
         </div>
 
         <div>
-          <L>Start Date</L>
+          <Label>Start Date *</Label>
           <input
             type="date"
             value={form.created_at}
-            onChange={(e) => setForm({ ...form, created_at: e.target.value })}
+            onChange={(e) => setField("created_at", e.target.value)}
             className="border p-2 rounded w-full"
             disabled={isEdit}
           />
           {isEdit && <div className="text-[11px] text-slate-400 mt-1">Start date can’t be edited.</div>}
+          <ErrorText msg={errors.created_at} />
         </div>
 
         <div>
-          <L>Department</L>
+          <Label>Department</Label>
           <select
             value={form.department_id}
-            onChange={(e) => setForm({ ...form, department_id: e.target.value })}
+            onChange={(e) => setField("department_id", e.target.value)}
             className="border p-2 rounded w-full"
           >
             <option value="">Select Department</option>
@@ -205,20 +324,21 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         </div>
 
         <div>
-          <L>Hourly Rate</L>
+          <Label>Pay Rate (Hourly) *</Label>
           <input
             value={form.hourly_rate}
-            onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
+            onChange={(e) => setField("hourly_rate", e.target.value)}
             className="border p-2 rounded w-full"
             placeholder="Hourly rate"
           />
+          <ErrorText msg={errors.hourly_rate} />
         </div>
 
         <div>
-          <L>Job Type</L>
+          <Label>Job Type</Label>
           <select
             value={form.job_type}
-            onChange={(e) => setForm({ ...form, job_type: e.target.value })}
+            onChange={(e) => setField("job_type", e.target.value)}
             className="border p-2 rounded w-full"
           >
             <option value="Part-time">Part-time</option>
@@ -227,66 +347,65 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         </div>
       </div>
 
-      {/* Address */}
       <div className="bg-slate-50 border rounded-xl p-4">
         <div className="font-bold mb-3">Address</div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
-            <L>Street Address</L>
+            <Label>Street Address</Label>
             <input
               value={form.address_street}
-              onChange={(e) => setForm({ ...form, address_street: e.target.value })}
+              onChange={(e) => setField("address_street", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="Street address"
             />
           </div>
 
           <div>
-            <L>Unit</L>
+            <Label>Unit</Label>
             <input
               value={form.address_unit}
-              onChange={(e) => setForm({ ...form, address_unit: e.target.value })}
+              onChange={(e) => setField("address_unit", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="Unit / Apt"
             />
           </div>
 
           <div>
-            <L>City</L>
+            <Label>City</Label>
             <input
               value={form.address_city}
-              onChange={(e) => setForm({ ...form, address_city: e.target.value })}
+              onChange={(e) => setField("address_city", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="City"
             />
           </div>
 
           <div>
-            <L>Province</L>
+            <Label>Province</Label>
             <input
               value={form.address_province}
-              onChange={(e) => setForm({ ...form, address_province: e.target.value })}
+              onChange={(e) => setField("address_province", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="Province"
             />
           </div>
 
           <div>
-            <L>Country</L>
+            <Label>Country</Label>
             <input
               value={form.address_country}
-              onChange={(e) => setForm({ ...form, address_country: e.target.value })}
+              onChange={(e) => setField("address_country", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="Country"
             />
           </div>
 
           <div>
-            <L>Postal Code</L>
+            <Label>Postal Code</Label>
             <input
               value={form.address_postal_code}
-              onChange={(e) => setForm({ ...form, address_postal_code: e.target.value })}
+              onChange={(e) => setField("address_postal_code", e.target.value)}
               className="border p-2 rounded w-full"
               placeholder="Postal code"
             />

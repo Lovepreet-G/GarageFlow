@@ -87,7 +87,7 @@ export const createEmployee = async (req, res) => {
   } = req.body
 
   if (!first_name) return res.status(400).json({ message: "First name required" })
-  if (!sin_number) return res.status(400).json({ message: "SIN required" })
+  if(!mobile && !email) return res.status(400).json({ message: "At least one contact (mobile or email) is required" } )
   if (!created_at) return res.status(400).json({ message: "Start date required" })
 
   try {
@@ -105,7 +105,7 @@ export const createEmployee = async (req, res) => {
         email || null,
         hourly_rate || null,
         department_id || null,
-        sin_number,
+        sin_number || null,
         job_type || null,
         created_at,
 
