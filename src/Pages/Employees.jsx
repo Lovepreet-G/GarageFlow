@@ -2,25 +2,55 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import departmentsApi from "../api/departmentsApi"
 
 export default function Employees() {
   const navigate = useNavigate()
 
   const [q, setQ] = useState("")
   const [rows, setRows] = useState([])
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const [statusFilter, setStatusFilter] = useState("all") // all | active | inactive
+  // ✅ Default: show Active only
+  const [statusFilter, setStatusFilter] = useState("active")
   const [confirm, setConfirm] = useState({ open: false, employee: null })
+
+  const deptMap = useMemo(() => {
+    const m = {}
+    for (const d of departments) m[String(d.id)] = d.name
+    return m
+  }, [departments])
+
+  const StatusBadge = ({ status }) => {
+    const v = String(status || "").toLowerCase()
+    const isActive = v === "active"
+
+    const cls = isActive
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+      : "bg-rose-50 text-rose-700 border-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.35)]"
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 text-xs rounded-lg border font-semibold ${cls}`}>
+        {isActive ? "Active" : "Inactive"}
+      </span>
+    )
+  }
 
   const load = async () => {
     setLoading(true)
     try {
-      const res = await api.get("/employees", { params: { q } })
-      setRows(res.data.employees || [])
+      const [empRes, deptRes] = await Promise.allSettled([
+        api.get("/employees", { params: { q } }),
+        departmentsApi.listDepartments(),
+      ])
+
+      setRows(empRes.status === "fulfilled" ? empRes.value.data.employees || [] : [])
+      setDepartments(deptRes.status === "fulfilled" ? deptRes.value.data.departments || [] : [])
     } catch (e) {
       console.error(e)
       setRows([])
+      setDepartments([])
     } finally {
       setLoading(false)
     }
@@ -41,11 +71,10 @@ export default function Employees() {
   const openRemove = (employee) => setConfirm({ open: true, employee })
   const closeRemove = () => setConfirm({ open: false, employee: null })
 
-  // ✅ “Remove” = deactivate (so it still shows when filter = ALL)
   const deactivate = async () => {
     if (!confirm.employee) return
     try {
-      await api.patch(`/employees/${confirm.employee.id}`, { status: "inactive" })
+      await api.delete(`/employees/${confirm.employee.id}`) // backend: deactivate
       closeRemove()
       load()
     } catch (e) {
@@ -75,9 +104,9 @@ export default function Employees() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm"
           >
-            <option value="all">All</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="all">All</option>
           </select>
 
           <button
@@ -95,9 +124,9 @@ export default function Employees() {
             <thead className="bg-slate-50 text-slate-500 text-xs">
               <tr className="text-left">
                 <th className="p-3">Name</th>
+                <th className="p-3">Department</th>
                 <th className="p-3">Mobile</th>
                 <th className="p-3">Email</th>
-                <th className="p-3">Role</th>
                 <th className="p-3">Rate</th>
                 <th className="p-3">Status</th>
                 <th className="p-3 text-right">Actions</th>
@@ -118,36 +147,51 @@ export default function Employees() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-t hover:bg-slate-50 cursor-pointer"
-                    onClick={() => navigate(`/employees/${r.id}`)}
-                  >
-                    <td className="p-3 font-semibold">{fullName(r)}</td>
-                    <td className="p-3 text-slate-600">{r.mobile || "—"}</td>
-                    <td className="p-3 text-slate-600">{r.email || "—"}</td>
-                    <td className="p-3">{r.job_type || r.role_id || "—"}</td>
-                    <td className="p-3">{r.hourly_rate ?? "—"}</td>
-                    <td className="p-3">{r.status || "—"}</td>
-                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => navigate(`/employees/${r.id}`)}
-                        className="px-3 py-1 rounded-xl border mr-2"
-                      >
-                        View
-                      </button>
+                filtered.map((r) => {
+                  const isInactive = String(r.status || "").toLowerCase() === "inactive"
+                  const deptName = r.department_id ? deptMap[String(r.department_id)] : "—"
 
-                      {/* ✅ Removed Edit button from list */}
-                      <button
-                        onClick={() => openRemove(r)}
-                        className="px-3 py-1 rounded-xl bg-rose-600 text-white"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-t hover:bg-slate-50 cursor-pointer"
+                      onClick={() => navigate(`/employees/${r.id}`)}
+                    >
+                      <td className="p-3 font-semibold">{fullName(r)}</td>
+                      <td className="p-3">{deptName || "—"}</td>
+                      <td className="p-3 text-slate-600">{r.mobile || "—"}</td>
+                      <td className="p-3 text-slate-600">{r.email || "—"}</td>
+                      <td className="p-3">{r.hourly_rate ?? "—"}</td>
+
+                      <td className="p-3">
+                        <StatusBadge status={r.status} />
+                      </td>
+
+                      <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => navigate(`/employees/${r.id}`)}
+                          className="px-3 py-1 rounded-xl border mr-2"
+                        >
+                          View
+                        </button>
+
+                        <button
+                          onClick={() => !isInactive && openRemove(r)}
+                          disabled={isInactive}
+                          className={[
+                            "px-3 py-1 rounded-xl",
+                            isInactive
+                              ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                              : "bg-rose-600 text-white",
+                          ].join(" ")}
+                          title={isInactive ? "Employee already inactive" : "Remove (Deactivate)"}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -157,7 +201,7 @@ export default function Employees() {
       {confirm.open && (
         <ConfirmModal
           title="Remove employee"
-          message={`Are you sure you want to remove ${fullName(confirm.employee)}? This will deactivate them.`}
+          message={`Are you sure you want to deactivate ${fullName(confirm.employee)}?`}
           onCancel={closeRemove}
           onConfirm={deactivate}
         />

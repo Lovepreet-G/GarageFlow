@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS `employees` (
   `email` varchar(255) DEFAULT NULL,
   `hourly_rate` decimal(10,2) DEFAULT NULL,
   `job_type` varchar(32) DEFAULT 'Part-time',
-  `role_id` int DEFAULT NULL,
-  `department_id` int DEFAULT NULL,
+  'department_id' int DEFAULT NULL,
   `sin_number` varchar(50) DEFAULT NULL,
   `status` varchar(32) DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,3 +86,10 @@ CREATE TABLE IF NOT EXISTS `roles` (
 INSERT IGNORE INTO roles (id, name) VALUES
 (1, 'Owner'), (2, 'Admin'), (3, 'Manager'), (4, 'Technician'), (5, 'ServiceAdvisor');
 
+ALTER TABLE employees
+  ADD COLUMN address_street VARCHAR(255) NULL AFTER sin_number,
+  ADD COLUMN address_unit VARCHAR(50) NULL AFTER address_street,
+  ADD COLUMN address_city VARCHAR(100) NULL AFTER address_unit,
+  ADD COLUMN address_province VARCHAR(100) NULL AFTER address_city,
+  ADD COLUMN address_country VARCHAR(100) NULL AFTER address_province,
+  ADD COLUMN address_postal_code VARCHAR(20) NULL AFTER address_country;
