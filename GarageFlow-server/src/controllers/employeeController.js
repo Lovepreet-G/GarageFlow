@@ -22,7 +22,6 @@ export const listEmployees = async (req, res) => {
         address_street, address_unit, address_city, address_province, address_country, address_postal_code
        FROM employees
        WHERE shop_id = ?
-         AND (deleted_at IS NULL)
          AND (
            CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ?
            OR email LIKE ?
