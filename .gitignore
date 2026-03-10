@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+GarageFlow-server/node_modules
+GarageFlow-server/dist
+GarageFlow-server/dist-ssr
 #dot env files
 .env.*
 .env
