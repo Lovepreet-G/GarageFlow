@@ -15,6 +15,7 @@ function getWeekRange(weekStart) {
   }
 }
 
+
 function escapeHtml(s = "") {
   return String(s)
     .replaceAll("&", "&amp;")
@@ -265,19 +266,8 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return !(aEnd <= bStart || bEnd <= aStart)
 }
 
-function toDateOnly(value) {
-  return new Date(value).toISOString().slice(0, 10)
-}
 
-function getWeekRange(weekStart) {
-  const start = new Date(weekStart)
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  return {
-    start: toDateOnly(start),
-    end: toDateOnly(end),
-  }
-}
+
 
 function isPastWorkDate(workDate) {
   const today = new Date()
