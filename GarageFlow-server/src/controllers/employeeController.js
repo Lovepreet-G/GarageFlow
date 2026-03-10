@@ -1,5 +1,6 @@
 import pool from "../config/db.js"
 import puppeteer from "puppeteer"
+import bcrypt from "bcryptjs"
 
 const escapeHtml = (s = "") =>
   String(s)
@@ -8,8 +9,7 @@ const escapeHtml = (s = "") =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;")
-
-// GET /api/employees?q=
+// GET /api/employees
 export const listEmployees = async (req, res) => {
   const shopId = req.shop.id
   const q = (`%${(req.query.q || "").trim()}%`).replaceAll("%", "%%")
@@ -18,10 +18,11 @@ export const listEmployees = async (req, res) => {
     const [rows] = await pool.query(
       `SELECT 
         id, first_name, last_name, mobile, email, hourly_rate, job_type, department_id, sin_number, status,
-        created_at, updated_at, deleted_at,
+        created_at, updated_at, deleted_at, dob, must_reset_password,
         address_street, address_unit, address_city, address_province, address_country, address_postal_code
        FROM employees
        WHERE shop_id = ?
+         AND deleted_at IS NULL
          AND (
            CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ?
            OR email LIKE ?
@@ -37,7 +38,6 @@ export const listEmployees = async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 }
-
 // GET /api/employees/:id
 export const getEmployeeById = async (req, res) => {
   const shopId = req.shop.id
@@ -47,7 +47,7 @@ export const getEmployeeById = async (req, res) => {
     const [rows] = await pool.query(
       `SELECT 
         id, first_name, last_name, mobile, email, hourly_rate, job_type, department_id, sin_number, status,
-        created_at, updated_at, deleted_at,
+        created_at, updated_at, deleted_at, dob, must_reset_password,
         address_street, address_unit, address_city, address_province, address_country, address_postal_code
        FROM employees
        WHERE id = ? AND shop_id = ?`,
@@ -61,8 +61,7 @@ export const getEmployeeById = async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 }
-
-// POST /api/employees
+// Post /api/employees
 export const createEmployee = async (req, res) => {
   const shopId = req.shop.id
 
@@ -75,9 +74,8 @@ export const createEmployee = async (req, res) => {
     department_id,
     sin_number,
     job_type,
-    created_at, // ✅ start date set by employer
-
-    // ✅ Address fields
+    created_at,
+    dob,
     address_street,
     address_unit,
     address_city,
@@ -87,16 +85,23 @@ export const createEmployee = async (req, res) => {
   } = req.body
 
   if (!first_name) return res.status(400).json({ message: "First name required" })
-  if(!mobile && !email) return res.status(400).json({ message: "At least one contact (mobile or email) is required" } )
+  if (!mobile) return res.status(400).json({ message: "Mobile required" })
   if (!created_at) return res.status(400).json({ message: "Start date required" })
+  if (!hourly_rate) return res.status(400).json({ message: "Pay rate required" })
+  if (!dob) return res.status(400).json({ message: "Date of birth required" })
 
   try {
+    const year = String(dob).slice(0, 4)
+    const defaultPassword = `${String(first_name).trim()}@${year}`
+    const password_hash = await bcrypt.hash(defaultPassword, 10)
+
     const [result] = await pool.query(
       `INSERT INTO employees (
         shop_id, first_name, last_name, mobile, email, hourly_rate, department_id, sin_number, job_type, created_at,
+        dob, password_hash, must_reset_password,
         address_street, address_unit, address_city, address_province, address_country, address_postal_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         shopId,
         first_name,
@@ -108,7 +113,9 @@ export const createEmployee = async (req, res) => {
         sin_number || null,
         job_type || null,
         created_at,
-
+        dob,
+        password_hash,
+        1,
         address_street || null,
         address_unit || null,
         address_city || null,
@@ -118,13 +125,15 @@ export const createEmployee = async (req, res) => {
       ]
     )
 
-    res.status(201).json({ id: result.insertId })
+    res.status(201).json({
+      id: result.insertId,
+      default_password_preview: defaultPassword,
+    })
   } catch (e) {
     console.error(e)
     res.status(500).json({ message: "Server insert error" })
   }
 }
-
 // PATCH /api/employees/:id
 export const updateEmployee = async (req, res) => {
   const shopId = req.shop.id
@@ -140,8 +149,7 @@ export const updateEmployee = async (req, res) => {
     job_type,
     sin_number,
     status,
-
-    // ✅ Address fields
+    dob,
     address_street,
     address_unit,
     address_city,
@@ -158,7 +166,7 @@ export const updateEmployee = async (req, res) => {
     if (!check.length) return res.status(404).json({ message: "Employee not found" })
 
     await pool.query(
-      `UPDATE employees 
+      `UPDATE employees
        SET first_name = COALESCE(?, first_name),
            last_name = COALESCE(?, last_name),
            mobile = COALESCE(?, mobile),
@@ -168,7 +176,7 @@ export const updateEmployee = async (req, res) => {
            job_type = COALESCE(?, job_type),
            sin_number = COALESCE(?, sin_number),
            status = COALESCE(?, status),
-
+           dob = COALESCE(?, dob),
            address_street = COALESCE(?, address_street),
            address_unit = COALESCE(?, address_unit),
            address_city = COALESCE(?, address_city),
@@ -186,14 +194,13 @@ export const updateEmployee = async (req, res) => {
         job_type,
         sin_number,
         status,
-
+        dob,
         address_street,
         address_unit,
         address_city,
         address_province,
         address_country,
         address_postal_code,
-
         id,
         shopId,
       ]
@@ -205,7 +212,6 @@ export const updateEmployee = async (req, res) => {
     res.status(500).json({ message: "Server error" })
   }
 }
-
 // DELETE /api/employees/:id (soft deactivate ONLY)
 export const softDeleteEmployee = async (req, res) => {
   const shopId = req.shop.id
@@ -218,7 +224,6 @@ export const softDeleteEmployee = async (req, res) => {
     )
     if (!check.length) return res.status(404).json({ message: "Employee not found" })
 
-    // ✅ remove = deactivate
     await pool.query(
       `UPDATE employees SET status = 'inactive' WHERE id = ? AND shop_id = ?`,
       [id, shopId]

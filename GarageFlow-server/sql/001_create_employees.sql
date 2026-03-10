@@ -93,3 +93,8 @@ ALTER TABLE employees
   ADD COLUMN address_province VARCHAR(100) NULL AFTER address_city,
   ADD COLUMN address_country VARCHAR(100) NULL AFTER address_province,
   ADD COLUMN address_postal_code VARCHAR(20) NULL AFTER address_country;
+
+ALTER TABLE employees
+  ADD COLUMN dob DATE NULL AFTER last_name,
+  ADD COLUMN password_hash VARCHAR(255) NULL AFTER email,
+  ADD COLUMN must_reset_password TINYINT(1) NOT NULL DEFAULT 1 AFTER password_hash;

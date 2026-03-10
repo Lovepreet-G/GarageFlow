@@ -2,12 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import departmentsApi from "../api/departmentsApi"
 import employeesApi from "../api/employeesApi"
 
-// ---- Phone helpers (no +1) ----
 const digitsOnly = (v) => String(v || "").replace(/\D/g, "")
 
 const formatPhone = (value) => {
   const digits = digitsOnly(value).slice(0, 10)
-
   const a = digits.slice(0, 3)
   const b = digits.slice(3, 6)
   const c = digits.slice(6, 10)
@@ -18,8 +16,6 @@ const formatPhone = (value) => {
   return ""
 }
 
-// Given formatted string and a number of digits that should be "before cursor",
-// return cursor position in formatted string.
 const caretPosFromDigits = (formatted, digitCount) => {
   if (!digitCount) return 0
   let seen = 0
@@ -37,7 +33,6 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
   const [departments, setDepartments] = useState([])
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
-
   const mobileRef = useRef(null)
 
   const [form, setForm] = useState({
@@ -50,6 +45,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
     hourly_rate: "",
     job_type: "Part-time",
     created_at: "",
+    dob: "",
 
     address_street: "",
     address_unit: "",
@@ -78,6 +74,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         hourly_rate: "",
         job_type: "Part-time",
         created_at: "",
+        dob: "",
 
         address_street: "",
         address_unit: "",
@@ -100,6 +97,7 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
       hourly_rate: safeInitial.hourly_rate ?? "",
       job_type: safeInitial.job_type || "Part-time",
       created_at: safeInitial.created_at ? String(safeInitial.created_at).slice(0, 10) : "",
+      dob: safeInitial.dob ? String(safeInitial.dob).slice(0, 10) : "",
 
       address_street: safeInitial.address_street || "",
       address_unit: safeInitial.address_unit || "",
@@ -111,18 +109,22 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
     setErrors({})
   }, [safeInitial?.id])
 
+  const generatedPassword = useMemo(() => {
+    const cleanName = String(form.first_name || "").trim()
+    const year = form.dob ? String(form.dob).slice(0, 4) : ""
+    if (!cleanName || !year) return ""
+    return `${cleanName}@${year}`
+  }, [form.first_name, form.dob])
+
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     setErrors((prev) => {
-      if (!prev[key]) return prev
+      if (!prev[key] && !prev._form) return prev
       const copy = { ...prev }
       delete copy[key]
+      delete copy._form
       return copy
     })
-  }
-
-  const setFormError = (msg) => {
-    setErrors((prev) => ({ ...prev, _form: msg }))
   }
 
   const validate = () => {
@@ -136,29 +138,28 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
     if (!mobDigits) next.mobile = "Mobile is required"
     else if (mobDigits.length < 10) next.mobile = "Mobile must be at least 10 digits"
 
-    // Required on both create + edit (edit is disabled but must be present)
     if (!form.created_at) next.created_at = "Start date is required"
+    if (!form.dob) next.dob = "Date of birth is required"
 
-    if (String(form.hourly_rate ?? "").trim() === "") next.hourly_rate = "Pay rate is required"
-    else if (!Number.isFinite(Number(form.hourly_rate))) next.hourly_rate = "Pay rate must be a number"
+    if (String(form.hourly_rate ?? "").trim() === "") {
+      next.hourly_rate = "Pay rate is required"
+    } else if (!Number.isFinite(Number(form.hourly_rate))) {
+      next.hourly_rate = "Pay rate must be a number"
+    }
 
     return next
   }
 
-  // ---- Mobile input (format + stable cursor + paste support) ----
   const handleMobileChange = (e) => {
     const input = e.target
     const raw = input.value
     const caret = input.selectionStart ?? raw.length
-
-    // how many digits were before caret in the raw input?
     const rawBeforeCaret = raw.slice(0, caret)
     const digitsBeforeCaret = digitsOnly(rawBeforeCaret).length
 
     const formatted = formatPhone(raw)
     setField("mobile", formatted)
 
-    // restore caret based on digits count
     requestAnimationFrame(() => {
       const el = mobileRef.current
       if (!el) return
@@ -195,13 +196,11 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
         last_name: form.last_name ? form.last_name.trim() : null,
         email: form.email ? form.email.trim() : null,
         mobile: form.mobile ? form.mobile.trim() : null,
-
-        // ✅ SIN optional (no validation)
         sin_number: form.sin_number ? form.sin_number.trim() : null,
-
         department_id: form.department_id || null,
         hourly_rate: form.hourly_rate === "" ? null : form.hourly_rate,
         job_type: form.job_type || null,
+        dob: form.dob,
 
         address_street: form.address_street ? form.address_street.trim() : null,
         address_unit: form.address_unit ? form.address_unit.trim() : null,
@@ -212,15 +211,20 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
       }
 
       if (isEdit) {
-        // created_at disabled on edit — don’t send
         await employeesApi.updateEmployee(safeInitial.id, payload)
       } else {
-        await employeesApi.createEmployee({ ...payload, created_at: form.created_at })
+        await employeesApi.createEmployee({
+          ...payload,
+          created_at: form.created_at,
+        })
       }
 
       onSaved && onSaved()
     } catch (e) {
-      setFormError(e?.response?.data?.message || "Something went wrong. Please try again.")
+      setErrors((prev) => ({
+        ...prev,
+        _form: e?.response?.data?.message || "Something went wrong. Please try again.",
+      }))
     } finally {
       setSaving(false)
     }
@@ -305,6 +309,28 @@ export default function EmployeeForm({ initial, onSaved, onCancel }) {
           />
           {isEdit && <div className="text-[11px] text-slate-400 mt-1">Start date can’t be edited.</div>}
           <ErrorText msg={errors.created_at} />
+        </div>
+
+        <div>
+          <Label>Date of Birth *</Label>
+          <input
+            type="date"
+            value={form.dob}
+            onChange={(e) => setField("dob", e.target.value)}
+            className="border p-2 rounded w-full"
+          />
+          <ErrorText msg={errors.dob} />
+        </div>
+
+        <div>
+          <Label>Default Password</Label>
+          <input
+            value={generatedPassword}
+            disabled
+            className="border p-2 rounded w-full bg-slate-100 text-slate-600"
+            placeholder="Auto-generated"
+          />
+          <div className="text-[11px] text-slate-400 mt-1">Format: FirstName@BirthYear</div>
         </div>
 
         <div>

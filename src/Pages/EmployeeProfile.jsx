@@ -46,7 +46,7 @@ export default function EmployeeProfile() {
 
       setData(empRes.status === "fulfilled" ? empRes.value.data.employee : null)
       setDepartments(deptRes.status === "fulfilled" ? deptRes.value.data.departments || [] : [])
-    } catch (e) {
+    } catch {
       setData(null)
       setDepartments([])
     } finally {
@@ -56,7 +56,6 @@ export default function EmployeeProfile() {
 
   useEffect(() => {
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   if (loading) return <div>Loading...</div>
@@ -66,7 +65,7 @@ export default function EmployeeProfile() {
 
   const deactivate = async () => {
     try {
-      await api.delete(`/employees/${id}`) // deactivate
+      await api.delete(`/employees/${id}`)
       setConfirmOpen(false)
       load()
     } catch (e) {
@@ -75,10 +74,10 @@ export default function EmployeeProfile() {
   }
 
   const startDate = data.created_at ? String(data.created_at).slice(0, 10) : "—"
+  const dob = data.dob ? String(data.dob).slice(0, 10) : "—"
   const endDate = data.updated_at ? String(data.updated_at).slice(0, 10) : "—"
   const deptName = data.department_id ? deptMap[String(data.department_id)] : "—"
 
-  // ✅ Address formatting (mini list)
   const addr = {
     street: data.address_street || "",
     unit: data.address_unit || "",
@@ -99,10 +98,7 @@ export default function EmployeeProfile() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <button
-            onClick={() => navigate("/employees")}
-            className="text-sm text-slate-500 hover:underline"
-          >
+          <button onClick={() => navigate("/employees")} className="text-sm text-slate-500 hover:underline">
             ← Back to Employees
           </button>
 
@@ -135,7 +131,6 @@ export default function EmployeeProfile() {
         </div>
       </div>
 
-      {/* Profile details */}
       <div className="bg-white border rounded-[20px] p-6">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -168,6 +163,11 @@ export default function EmployeeProfile() {
           </div>
 
           <div>
+            <strong>Date of Birth</strong>
+            <div className="text-slate-600">{dob}</div>
+          </div>
+
+          <div>
             <strong>Start Date</strong>
             <div className="text-slate-600">{startDate}</div>
           </div>
@@ -179,7 +179,6 @@ export default function EmployeeProfile() {
             </div>
           )}
 
-          {/* ✅ Address mini-list */}
           <div className="col-span-2 mt-2">
             <strong>Address</strong>
 
@@ -211,7 +210,6 @@ export default function EmployeeProfile() {
         </div>
       </div>
 
-      {/* Edit form */}
       {editing && (
         <div className="bg-white border rounded-[20px] p-6">
           <h4 className="font-bold mb-2">Edit</h4>
@@ -226,7 +224,6 @@ export default function EmployeeProfile() {
         </div>
       )}
 
-      {/* Confirm deactivate */}
       {confirmOpen && (
         <ConfirmModal
           title="Remove employee"
