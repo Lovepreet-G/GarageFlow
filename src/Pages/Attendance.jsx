@@ -9,9 +9,17 @@ function getMonday(d) {
   x.setDate(x.getDate() + diff)
   return x
 }
+
 function fmt(d) {
   return new Date(d).toISOString().slice(0, 10)
 }
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + days)
+  return fmt(d)
+}
+
 function getName(emp) {
   const fn = emp?.first_name || ""
   const ln = emp?.last_name || ""
@@ -19,13 +27,28 @@ function getName(emp) {
   return full || emp?.name || "—"
 }
 
+function calculateHours(start, end) {
+  if (!start || !end) return "0.00"
+  const [sh, sm] = start.split(":").map(Number)
+  const [eh, em] = end.split(":").map(Number)
+
+  let startMins = sh * 60 + sm
+  let endMins = eh * 60 + em
+
+  if (endMins < startMins) endMins += 24 * 60
+
+  const diff = (endMins - startMins) / 60
+  return diff.toFixed(2)
+}
+
 export default function Attendance() {
   const [weekStart, setWeekStart] = useState(fmt(getMonday(new Date())))
   const [rows, setRows] = useState([])
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(false)
-
+  const [saving, setSaving] = useState(false)
   const [employeeId, setEmployeeId] = useState("all")
+  const [dirtyMap, setDirtyMap] = useState({})
 
   const empMap = useMemo(() => {
     const m = {}
@@ -41,18 +64,19 @@ export default function Attendance() {
   const load = async () => {
     setLoading(true)
     try {
-      const [aRes, eRes] = await Promise.allSettled([
+      const [aRes, eRes] = await Promise.all([
         attendanceApi.getAttendance({ weekStart }),
         employeesApi.listEmployees(),
       ])
-      if (aRes.status === "fulfilled") setRows(aRes.value?.data?.attendance || [])
-      else setRows([])
-      if (eRes.status === "fulfilled") setEmployees(eRes.value?.data?.employees || [])
-      else setEmployees([])
+
+      setRows(aRes.data.attendance || [])
+      setEmployees(eRes.data.employees || [])
+      setDirtyMap({})
     } catch (e) {
       console.error(e)
       setRows([])
       setEmployees([])
+      setDirtyMap({})
     } finally {
       setLoading(false)
     }
@@ -62,22 +86,69 @@ export default function Attendance() {
     load()
   }, [weekStart])
 
+  const goPrevWeek = () => setWeekStart((prev) => addDays(prev, -7))
+  const goNextWeek = () => setWeekStart((prev) => addDays(prev, 7))
+  const handleWeekInput = (value) => setWeekStart(fmt(getMonday(value)))
+
+  const updateCell = (id, field, value) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
+    setDirtyMap((prev) => ({ ...prev, [id]: true }))
+  }
+
+  const saveChanges = async () => {
+    const dirtyRows = rows.filter((r) => dirtyMap[r.id])
+    if (!dirtyRows.length) return
+
+    try {
+      setSaving(true)
+
+      for (const row of dirtyRows) {
+        await attendanceApi.updateAttendance(row.id, {
+          punch_in: row.punch_in,
+          punch_out: row.punch_out,
+        })
+      }
+
+      await load()
+    } catch (e) {
+      console.error(e)
+      alert(e?.response?.data?.message || "Failed to update attendance")
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-2xl font-extrabold">Attendance</div>
-          <div className="text-xs text-slate-400">Punch in/out is auto-generated from schedule</div>
+          <div className="text-xs text-slate-400">
+            Scheduled punches are defaulted from schedule. You can edit actual punch times here.
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={goPrevWeek} className="px-3 py-2 rounded-xl border">
+            Prev Week
+          </button>
+
           <input
             type="date"
             value={weekStart}
-            onChange={(e) => setWeekStart(e.target.value)}
+            onChange={(e) => handleWeekInput(e.target.value)}
             className="border p-2 rounded"
           />
-          <button onClick={load} className="px-3 py-2 rounded-xl border text-sm">
-            Refresh
+
+          <button onClick={goNextWeek} className="px-3 py-2 rounded-xl border">
+            Next Week
+          </button>
+
+          <button
+            onClick={saveChanges}
+            disabled={!Object.keys(dirtyMap).length || saving}
+            className="px-4 py-2 rounded-xl bg-cyan-600 text-white font-bold disabled:opacity-50"
+          >
+            {saving ? "Saving..." : `Save Changes${Object.keys(dirtyMap).length ? ` (${Object.keys(dirtyMap).length})` : ""}`}
           </button>
         </div>
       </div>
@@ -99,7 +170,7 @@ export default function Attendance() {
         </div>
 
         {loading ? (
-          <div className="p-4 text-slate-400">Loading…</div>
+          <div className="p-4 text-slate-400">Loading...</div>
         ) : filtered.length === 0 ? (
           <div className="p-4 text-slate-400">No attendance for this week</div>
         ) : (
@@ -112,21 +183,39 @@ export default function Attendance() {
                   <th className="p-3 text-left">Scheduled</th>
                   <th className="p-3 text-left">Punch In</th>
                   <th className="p-3 text-left">Punch Out</th>
+                  <th className="p-3 text-left">Worked Hours</th>
                   <th className="p-3 text-left">Source</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => {
                   const emp = empMap[String(r.employee_id)]
+                  const workedHours = calculateHours(r.punch_in, r.punch_out)
+
                   return (
                     <tr key={r.id || `${r.employee_id}_${r.work_date}`} className="border-t">
                       <td className="p-3 font-semibold">{emp ? getName(emp) : `#${r.employee_id}`}</td>
                       <td className="p-3">{r.work_date}</td>
                       <td className="p-3">
-                        {r.scheduled_start} – {r.scheduled_end}
+                        {r.scheduled_start} - {r.scheduled_end}
                       </td>
-                      <td className="p-3">{r.punch_in}</td>
-                      <td className="p-3">{r.punch_out}</td>
+                      <td className="p-3">
+                        <input
+                          type="time"
+                          value={r.punch_in || ""}
+                          onChange={(e) => updateCell(r.id, "punch_in", e.target.value)}
+                          className="border rounded px-2 py-1"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <input
+                          type="time"
+                          value={r.punch_out || ""}
+                          onChange={(e) => updateCell(r.id, "punch_out", e.target.value)}
+                          className="border rounded px-2 py-1"
+                        />
+                      </td>
+                      <td className="p-3 font-semibold">{workedHours}</td>
                       <td className="p-3 text-slate-600">{r.source || "schedule"}</td>
                     </tr>
                   )

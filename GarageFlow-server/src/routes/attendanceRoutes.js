@@ -6,5 +6,6 @@ const router = express.Router()
 router.use(requireAuth)
 
 router.get("/", listAttendance)
+router.patch("/:id", updateAttendance)
 
 export default router

@@ -1,5 +1,8 @@
-import api from '../api'
+import api from "../api"
 
-export const getAttendance = (params) => api.get('/attendance', { params })
+const attendanceApi = {
+  getAttendance: (params) => api.get("/attendance", { params }),
+  updateAttendance: (id, payload) => api.patch(`/attendance/${id}`, payload),
+}
 
-export default { getAttendance }
+export default attendanceApi
