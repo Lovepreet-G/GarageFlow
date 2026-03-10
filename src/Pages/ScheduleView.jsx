@@ -79,36 +79,24 @@ export default function ScheduleView() {
   const goNextWeek = () => setWeekStart((prev) => addDays(prev, 7))
   const handleWeekInput = (value) => setWeekStart(fmt(getMonday(value)))
 
-  const downloadCsv = () => {
-    const header = ["Employee", ...week]
-    const activeEmployees = employees.filter((e) => String(e.status || "").toLowerCase() === "active")
+  const downloadPdf = async () => {
+  try {
+    const res = await scheduleApi.downloadSchedulePdf(weekStart)
 
-    const rows = activeEmployees.map((emp) => {
-      const name = `${emp.first_name || ""} ${emp.last_name || ""}`.trim()
-      const cells = week.map((date) => {
-        const s = schedulesMap[`${emp.id}_${date}`]
-        if (!s) return ""
-        return `${s.start_time}-${s.end_time}${s.break_start && s.break_end ? ` | Break ${s.break_start}-${s.break_end}` : ""}${s.notes ? ` | ${s.notes}` : ""}`
-      })
-      return [name, ...cells]
-    })
-
-    const csv = [header, ...rows]
-      .map((row) =>
-        row
-          .map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`)
-          .join(",")
-      )
-      .join("\n")
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const blob = new Blob([res.data], { type: "application/pdf" })
     const url = URL.createObjectURL(blob)
+
     const a = document.createElement("a")
     a.href = url
-    a.download = `weekly_schedule_${weekStart}.csv`
+    a.download = `weekly_schedule_${weekStart}.pdf`
     a.click()
+
     URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error(e)
+    alert(e?.response?.data?.message || "Failed to download PDF")
   }
+}
 
   const activeEmployees = employees.filter((e) => String(e.status || "").toLowerCase() === "active")
 
@@ -136,7 +124,7 @@ export default function ScheduleView() {
             Next Week
           </button>
 
-          <button onClick={downloadCsv} className="px-3 py-2 rounded-xl border">
+          <button onClick={downloadPdf} className="px-3 py-2 rounded-xl border">
             Download Week
           </button>
         </div>
