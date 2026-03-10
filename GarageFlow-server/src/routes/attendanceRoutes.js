@@ -1,6 +1,6 @@
 import express from "express"
 import { requireAuth } from "../middleware/authMiddleware.js"
-import { listAttendance } from "../controllers/attendanceController.js"
+import { listAttendance , updateAttendance} from "../controllers/attendanceController.js"
 
 const router = express.Router()
 router.use(requireAuth)
