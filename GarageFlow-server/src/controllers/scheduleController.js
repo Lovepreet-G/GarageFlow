@@ -129,9 +129,9 @@ export const createSchedule = async (req, res) => {
     return res.status(400).json({ message: "Employee, date, start time and end time are required" })
   }
 
-  if (isPastWorkDate(work_date)) {
-    return res.status(400).json({ message: "Past schedule dates cannot be created" })
-  }
+//   if (isPastWorkDate(work_date)) {
+//     return res.status(400).json({ message: "Past schedule dates cannot be created" })
+//   }
 
   if (end_time <= start_time) {
     return res.status(400).json({ message: "End time must be after start time" })
@@ -226,9 +226,9 @@ export const updateSchedule = async (req, res) => {
     if (!rows.length) return res.status(404).json({ message: "Schedule not found" })
     const current = rows[0]
 
-    if (isPastWorkDate(current.work_date)) {
-      return res.status(400).json({ message: "Past schedule dates cannot be updated" })
-    }
+    // if (isPastWorkDate(current.work_date)) {
+    //   return res.status(400).json({ message: "Past schedule dates cannot be updated" })
+    // }
 
     const nextStart = start_time || current.start_time
     const nextEnd = end_time || current.end_time
