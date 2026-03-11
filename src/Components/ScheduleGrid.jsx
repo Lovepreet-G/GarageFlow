@@ -16,26 +16,32 @@ function fullName(emp) {
 
 export default function ScheduleGrid({
   employees = [],
-  week = [], // array of YYYY-MM-DD
-  schedules = {}, // map `${employee_id}_${date}` => schedule row
+  week = [],
+  schedules = {},
   readOnly = false,
   onCellClick,
+  isCellLocked,
 }) {
   const todayIso = new Date().toISOString().slice(0, 10)
 
   const weekMeta = useMemo(() => week.map((d) => ({ date: d, ...dayLabel(d) })), [week])
+
+  const cellLocked = (emp, date) => {
+    if (typeof isCellLocked === "function") return Boolean(isCellLocked(emp, date))
+    return false
+  }
 
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm border-separate border-spacing-0">
         <thead className="bg-slate-50 text-slate-500 text-xs">
           <tr>
-            <th className="p-2 sticky left-0 bg-slate-50 z-10 text-left">Employee</th>
+            <th className="p-2 sticky left-0 bg-slate-50 z-10 text-left min-w-[180px]">Employee</th>
             {weekMeta.map((w) => (
               <th
                 key={w.date}
                 className={[
-                  "p-2 text-left whitespace-nowrap",
+                  "p-2 text-left whitespace-nowrap min-w-[150px]",
                   w.date === todayIso ? "bg-cyan-50" : "",
                 ].join(" ")}
               >
@@ -56,11 +62,12 @@ export default function ScheduleGrid({
           ) : (
             employees.map((emp) => {
               const inactive = String(emp?.status || "").toLowerCase() === "inactive"
+
               return (
                 <tr key={emp.id} className="border-t">
                   <td
                     className={[
-                      "p-2 font-semibold sticky left-0 z-10 bg-white",
+                      "p-2 font-semibold sticky left-0 z-10 bg-white border-r",
                       inactive ? "text-slate-400" : "",
                     ].join(" ")}
                     title={inactive ? "Inactive employee" : ""}
@@ -71,7 +78,8 @@ export default function ScheduleGrid({
                   {week.map((d) => {
                     const key = `${emp.id}_${d}`
                     const s = schedules[key]
-                    const clickable = !readOnly && !inactive && typeof onCellClick === "function"
+                    const locked = cellLocked(emp, d)
+                    const clickable = !readOnly && !inactive && !locked && typeof onCellClick === "function"
 
                     return (
                       <td
@@ -79,6 +87,7 @@ export default function ScheduleGrid({
                         className={[
                           "p-2 align-top",
                           d === todayIso ? "bg-cyan-50/40" : "",
+                          locked ? "bg-slate-100" : "",
                         ].join(" ")}
                       >
                         <button
@@ -86,26 +95,41 @@ export default function ScheduleGrid({
                           disabled={!clickable}
                           onClick={() => clickable && onCellClick(emp, d)}
                           className={[
-                            "w-full text-left min-h-[44px] rounded-lg px-2 py-2 border",
+                            "w-full text-left min-h-[60px] rounded-lg px-2 py-2 border transition",
                             clickable ? "hover:bg-slate-50 cursor-pointer" : "cursor-default",
-                            s ? "border-slate-200" : "border-dashed border-slate-200",
+                            s ? "border-slate-200 bg-white" : "border-dashed border-slate-200 bg-white",
                             inactive ? "opacity-60" : "",
+                            locked ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "",
                           ].join(" ")}
-                          title={readOnly ? "View only" : inactive ? "Inactive employee" : "Click to set shift"}
+                          title={
+                            readOnly
+                              ? "View only"
+                              : inactive
+                                ? "Inactive employee"
+                                : locked
+                                  ? "Past dates cannot be edited"
+                                  : "Click to set shift"
+                          }
                         >
                           {s ? (
-                            <div className="font-semibold">
-                              {s.start_time} – {s.end_time}
-                            </div>
+                            <>
+                              <div className="font-semibold">
+                                {s.start_time} - {s.end_time}
+                              </div>
+                              {s?.break_start && s?.break_end ? (
+                                <div className="text-xs text-slate-500 mt-1">
+                                  Break: {s.break_start} - {s.break_end}
+                                </div>
+                              ) : null}
+                              {s?.notes ? (
+                                <div className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                  {s.notes}
+                                </div>
+                              ) : null}
+                            </>
                           ) : (
-                            <div className="text-slate-400">—</div>
+                            <div className="text-slate-400">{locked ? "Locked" : "—"}</div>
                           )}
-                          {s?.break_start && s?.break_end ? (
-                            <div className="text-xs text-slate-500 mt-1">
-                              Break: {s.break_start} – {s.break_end}
-                            </div>
-                          ) : null}
-                          {s?.notes ? <div className="text-xs text-slate-500 mt-1">{s.notes}</div> : null}
                         </button>
                       </td>
                     )
@@ -119,7 +143,7 @@ export default function ScheduleGrid({
 
       {!readOnly ? (
         <div className="text-xs text-slate-400 mt-2">
-          Tip: Click a cell to set shift timing. Attendance punch-in/out will be auto-created from this schedule.
+          Tip: Click a cell to set shift timing. Past dates are locked. Attendance punch-in/out will be auto-created from this schedule.
         </div>
       ) : null}
     </div>

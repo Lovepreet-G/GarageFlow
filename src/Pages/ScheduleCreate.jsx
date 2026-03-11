@@ -17,6 +17,11 @@ function fmt(date) {
   return new Date(date).toISOString().slice(0, 10)
 }
 
+function normalizeDateOnly(value) {
+  if (!value) return null
+  return new Date(value).toISOString().slice(0, 10)
+}
+
 function addDays(dateStr, days) {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
@@ -73,6 +78,15 @@ export default function ScheduleCreate() {
 
   const unsavedCount = useMemo(() => Object.keys(drafts).length, [drafts])
 
+  const buildMap = (scheds) => {
+    const map = {}
+    for (const raw of scheds || []) {
+      const s = { ...raw, work_date: normalizeDateOnly(raw.work_date) }
+      map[`${s.employee_id}_${s.work_date}`] = s
+    }
+    return map
+  }
+
   const load = async () => {
     setLoading(true)
     try {
@@ -81,13 +95,10 @@ export default function ScheduleCreate() {
         scheduleApi.getSchedules({ weekStart }),
       ])
 
-      const emps = eRes.data.employees || []
-      const scheds = sRes.data.schedules || []
+      const emps = eRes.data?.employees || []
+      const scheds = sRes.data?.schedules || []
 
-      const map = {}
-      for (const s of scheds) {
-        map[`${s.employee_id}_${s.work_date}`] = s
-      }
+      const map = buildMap(scheds)
 
       setEmployees(emps)
       setOriginalMap(map)
@@ -117,7 +128,6 @@ export default function ScheduleCreate() {
 
   const openCell = (employee, date) => {
     if (isPastDate(date)) return
-
     const existing = scheduleMap[`${employee.id}_${date}`] || null
     setModal({ open: true, employee, date, existing })
   }
@@ -126,30 +136,35 @@ export default function ScheduleCreate() {
     setModal({ open: false, employee: null, date: null, existing: null })
   }
 
-  const saveShiftLocally = async (payload) => {
+  const saveShiftLocally = (payload) => {
     if (isPastDate(payload.work_date)) {
       alert("Past dates cannot be updated")
       return
     }
 
     const key = `${payload.employee_id}_${payload.work_date}`
-    const existing = scheduleMap[key] || null
     const original = originalMap[key] || null
+    const current = scheduleMap[key] || null
 
     const nextShift = {
-      ...(existing || {}),
+      ...(original || {}),
+      ...(current || {}),
       ...payload,
-      id: existing?.id || original?.id || null,
-      shop_id: existing?.shop_id || original?.shop_id || null,
-      status: existing?.status || original?.status || "scheduled",
+      work_date: normalizeDateOnly(payload.work_date),
+      id: current?.id || original?.id || null,
+      status: current?.status || original?.status || "scheduled",
     }
 
-    setScheduleMap((prev) => ({ ...prev, [key]: nextShift }))
+    setScheduleMap((prev) => ({
+      ...prev,
+      [key]: nextShift,
+    }))
 
     setDrafts((prev) => {
-      const copy = { ...prev }
-      if (original) {
-        copy[key] = {
+      const next = { ...prev }
+
+      if (original?.id) {
+        next[key] = {
           action: "update",
           id: original.id,
           payload: {
@@ -158,11 +173,10 @@ export default function ScheduleCreate() {
             break_start: payload.break_start || null,
             break_end: payload.break_end || null,
             notes: payload.notes || null,
-            status: payload.status || original.status || "scheduled",
           },
         }
       } else {
-        copy[key] = {
+        next[key] = {
           action: "create",
           payload: {
             employee_id: payload.employee_id,
@@ -175,15 +189,17 @@ export default function ScheduleCreate() {
           },
         }
       }
-      return copy
+
+      return next
     })
 
     closeModal()
   }
 
-  const deleteShiftLocally = async () => {
+  const deleteShiftLocally = () => {
     const { employee, date } = modal
     if (!employee || !date) return
+
     if (isPastDate(date)) {
       alert("Past dates cannot be updated")
       return
@@ -193,19 +209,24 @@ export default function ScheduleCreate() {
     const original = originalMap[key] || null
 
     setScheduleMap((prev) => {
-      const copy = { ...prev }
-      delete copy[key]
-      return copy
+      const next = { ...prev }
+      delete next[key]
+      return next
     })
 
     setDrafts((prev) => {
-      const copy = { ...prev }
-      if (original) {
-        copy[key] = { action: "delete", id: original.id }
+      const next = { ...prev }
+
+      if (original?.id) {
+        next[key] = {
+          action: "delete",
+          id: original.id,
+        }
       } else {
-        delete copy[key]
+        delete next[key]
       }
-      return copy
+
+      return next
     })
 
     closeModal()
@@ -226,7 +247,10 @@ export default function ScheduleCreate() {
 
     try {
       const res = await scheduleApi.getSchedules({ weekStart: normalizedCopyWeek })
-      const sourceSchedules = res.data.schedules || []
+      const sourceSchedules = (res.data?.schedules || []).map((s) => ({
+        ...s,
+        work_date: normalizeDateOnly(s.work_date),
+      }))
 
       setScheduleMap((prevMap) => {
         const nextMap = { ...prevMap }
@@ -256,7 +280,7 @@ export default function ScheduleCreate() {
 
             nextMap[key] = copiedShift
 
-            if (original) {
+            if (original?.id) {
               nextDrafts[key] = {
                 action: "update",
                 id: original.id,
@@ -266,7 +290,6 @@ export default function ScheduleCreate() {
                   break_start: s.break_start || null,
                   break_end: s.break_end || null,
                   notes: s.notes || null,
-                  status: s.status || "scheduled",
                 },
               }
             } else {
@@ -326,7 +349,7 @@ export default function ScheduleCreate() {
         <div>
           <div className="text-2xl font-extrabold">Create Schedule</div>
           <div className="text-xs text-slate-400">
-            Week starts Monday • Only active employees are shown • Past dates are locked
+            When changing weeks, previously saved schedules auto-load into the table
           </div>
         </div>
 
@@ -351,7 +374,6 @@ export default function ScheduleCreate() {
             value={copyWeekStart}
             onChange={(e) => setCopyWeekStart(e.target.value)}
             className="border p-2 rounded"
-            title="Select any previous week to copy from"
           />
 
           <button onClick={copyFromSelectedWeek} className="px-3 py-2 rounded-xl border">
@@ -388,12 +410,4 @@ export default function ScheduleCreate() {
         open={modal.open}
         onClose={closeModal}
         date={modal.date}
-        employee={modal.employee || {}}
-        existing={modal.existing}
-        onSave={saveShiftLocally}
-        onDelete={deleteShiftLocally}
-        readOnly={modal.date ? isPastDate(modal.date) : false}
-      />
-    </div>
-  )
-}
+     
