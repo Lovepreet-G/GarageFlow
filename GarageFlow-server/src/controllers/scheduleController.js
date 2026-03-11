@@ -8,10 +8,7 @@ function parseLocalDate(dateStr) {
 
 function toDateOnly(value) {
   if (!value) return null
-
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value
-  }
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
 
   const d = new Date(value)
   const y = d.getFullYear()
@@ -42,15 +39,19 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return !(aEnd <= bStart || bEnd <= aStart)
 }
 
-function isPastWorkDate(workDate) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+// function getTodayInToronto() {
+//   return new Intl.DateTimeFormat("en-CA", {
+//     timeZone: "America/Toronto",
+//     year: "numeric",
+//     month: "2-digit",
+//     day: "2-digit",
+//   }).format(new Date())
+// }
 
-  const d = parseLocalDate(workDate)
-  d.setHours(0, 0, 0, 0)
-
-  return d < today
-}
+// function isPastWorkDate(workDate) {
+//   const todayToronto = getTodayInToronto()
+//   return String(workDate) < todayToronto
+// }
 
 function escapeHtml(s = "") {
   return String(s)
@@ -75,6 +76,17 @@ function getWeekDays(weekStart) {
       }),
     }
   })
+}
+
+function formatTime12(value) {
+  if (!value) return ""
+  const [rawH = "0", rawM = "00"] = String(value).split(":")
+  let h = Number(rawH)
+  const m = String(rawM).padStart(2, "0")
+  const ampm = h >= 12 ? "PM" : "AM"
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${m} ${ampm}`
 }
 
 export const listSchedules = async (req, res) => {
@@ -128,10 +140,6 @@ export const createSchedule = async (req, res) => {
   if (!employee_id || !work_date || !start_time || !end_time) {
     return res.status(400).json({ message: "Employee, date, start time and end time are required" })
   }
-
-//   if (isPastWorkDate(work_date)) {
-//     return res.status(400).json({ message: "Past schedule dates cannot be created" })
-//   }
 
   if (end_time <= start_time) {
     return res.status(400).json({ message: "End time must be after start time" })
@@ -225,10 +233,6 @@ export const updateSchedule = async (req, res) => {
 
     if (!rows.length) return res.status(404).json({ message: "Schedule not found" })
     const current = rows[0]
-
-    // if (isPastWorkDate(current.work_date)) {
-    //   return res.status(400).json({ message: "Past schedule dates cannot be updated" })
-    // }
 
     const nextStart = start_time || current.start_time
     const nextEnd = end_time || current.end_time
@@ -324,10 +328,6 @@ export const deleteSchedule = async (req, res) => {
     if (!rows.length) return res.status(404).json({ message: "Schedule not found" })
     const s = rows[0]
 
-    if (isPastWorkDate(s.work_date)) {
-      return res.status(400).json({ message: "Past schedule dates cannot be deleted" })
-    }
-
     await pool.query(`DELETE FROM employee_schedules WHERE id = ? AND shop_id = ?`, [id, shopId])
 
     await pool.query(
@@ -396,16 +396,14 @@ export const downloadWeeklySchedulePdf = async (req, res) => {
 
             const breakText =
               s.break_start && s.break_end
-                ? `<div class="break">Break: ${escapeHtml(s.break_start)} - ${escapeHtml(s.break_end)}</div>`
+                ? `<div class="break">Break: ${escapeHtml(formatTime12(s.break_start))} - ${escapeHtml(formatTime12(s.break_end))}</div>`
                 : ""
 
-            const notesText = s.notes
-              ? `<div class="notes">${escapeHtml(s.notes)}</div>`
-              : ""
+            const notesText = s.notes ? `<div class="notes">${escapeHtml(s.notes)}</div>` : ""
 
             return `
               <td>
-                <div class="shift">${escapeHtml(s.start_time)} - ${escapeHtml(s.end_time)}</div>
+                <div class="shift">${escapeHtml(formatTime12(s.start_time))} - ${escapeHtml(formatTime12(s.end_time))}</div>
                 ${breakText}
                 ${notesText}
               </td>

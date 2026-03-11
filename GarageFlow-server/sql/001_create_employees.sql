@@ -98,3 +98,7 @@ ALTER TABLE employees
   ADD COLUMN dob DATE NULL AFTER last_name,
   ADD COLUMN password_hash VARCHAR(255) NULL AFTER email,
   ADD COLUMN must_reset_password TINYINT(1) NOT NULL DEFAULT 1 AFTER password_hash;
+
+ALTER TABLE attendance
+  ADD COLUMN break_start TIME NULL AFTER punch_out,
+  ADD COLUMN break_end TIME NULL AFTER break_start;

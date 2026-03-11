@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 function dayLabel(isoDate) {
-  const d = new Date(isoDate + "T00:00:00")
+  const d = new Date(`${isoDate}T00:00:00`)
   const day = d.toLocaleDateString(undefined, { weekday: "short" })
   const md = d.toLocaleDateString(undefined, { month: "short", day: "2-digit" })
   return { day, md }
@@ -14,6 +14,17 @@ function fullName(emp) {
   return name || emp?.name || `#${emp?.id ?? "—"}`
 }
 
+function formatTime12(value) {
+  if (!value) return ""
+  const [rawH = "0", rawM = "00"] = String(value).split(":")
+  let h = Number(rawH)
+  const m = String(rawM).padStart(2, "0")
+  const ampm = h >= 12 ? "PM" : "AM"
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${m} ${ampm}`
+}
+
 export default function ScheduleGrid({
   employees = [],
   week = [],
@@ -23,7 +34,6 @@ export default function ScheduleGrid({
   isCellLocked,
 }) {
   const todayIso = new Date().toISOString().slice(0, 10)
-
   const weekMeta = useMemo(() => week.map((d) => ({ date: d, ...dayLabel(d) })), [week])
 
   const cellLocked = (emp, date) => {
@@ -41,7 +51,7 @@ export default function ScheduleGrid({
               <th
                 key={w.date}
                 className={[
-                  "p-2 text-left whitespace-nowrap min-w-[150px]",
+                  "p-2 text-left whitespace-nowrap min-w-[170px]",
                   w.date === todayIso ? "bg-cyan-50" : "",
                 ].join(" ")}
               >
@@ -114,13 +124,15 @@ export default function ScheduleGrid({
                           {s ? (
                             <>
                               <div className="font-semibold">
-                                {s.start_time} - {s.end_time}
+                                {formatTime12(s.start_time)} - {formatTime12(s.end_time)}
                               </div>
+
                               {s?.break_start && s?.break_end ? (
                                 <div className="text-xs text-slate-500 mt-1">
-                                  Break: {s.break_start} - {s.break_end}
+                                  Break: {formatTime12(s.break_start)} - {formatTime12(s.break_end)}
                                 </div>
                               ) : null}
+
                               {s?.notes ? (
                                 <div className="text-xs text-slate-500 mt-1 line-clamp-2">
                                   {s.notes}
@@ -143,7 +155,7 @@ export default function ScheduleGrid({
 
       {!readOnly ? (
         <div className="text-xs text-slate-400 mt-2">
-          Tip: Click a cell to set shift timing. Past dates are locked. Attendance punch-in/out will be auto-created from this schedule.
+          Tip: Click a cell to set shift timing. Times are shown in 12-hour AM/PM format.
         </div>
       ) : null}
     </div>

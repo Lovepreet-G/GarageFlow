@@ -1,13 +1,31 @@
 import pool from "../config/db.js"
 
 function toDateOnly(value) {
-  return new Date(value).toISOString().slice(0, 10)
+  if (!value) return null
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value
+  }
+
+  const d = new Date(value)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+function normalizeAttendanceRow(row) {
+  return {
+    ...row,
+    work_date: toDateOnly(row.work_date),
+  }
 }
 
 function getWeekRange(weekStart) {
-  const start = new Date(weekStart)
+  const start = new Date(`${weekStart}T00:00:00`)
   const end = new Date(start)
   end.setDate(start.getDate() + 6)
+
   return {
     start: toDateOnly(start),
     end: toDateOnly(end),
@@ -28,7 +46,7 @@ export const listAttendance = async (req, res) => {
          ORDER BY employee_id ASC`,
         [shopId, date]
       )
-      return res.json({ attendance: rows })
+      return res.json({ attendance: rows.map(normalizeAttendanceRow) })
     }
 
     if (weekStart) {
@@ -40,7 +58,7 @@ export const listAttendance = async (req, res) => {
          ORDER BY work_date ASC, employee_id ASC`,
         [shopId, start, end]
       )
-      return res.json({ attendance: rows })
+      return res.json({ attendance: rows.map(normalizeAttendanceRow) })
     }
 
     const [rows] = await pool.query(
@@ -52,7 +70,7 @@ export const listAttendance = async (req, res) => {
       [shopId]
     )
 
-    res.json({ attendance: rows })
+    res.json({ attendance: rows.map(normalizeAttendanceRow) })
   } catch (e) {
     console.error(e)
     res.status(500).json({ message: "Server error" })
@@ -62,7 +80,7 @@ export const listAttendance = async (req, res) => {
 export const updateAttendance = async (req, res) => {
   const shopId = req.shop.id
   const { id } = req.params
-  const { punch_in, punch_out } = req.body
+  const { punch_in, punch_out, break_start, break_end } = req.body
 
   if (!punch_in || !punch_out) {
     return res.status(400).json({ message: "Punch in and punch out are required" })
@@ -70,6 +88,19 @@ export const updateAttendance = async (req, res) => {
 
   if (punch_out <= punch_in) {
     return res.status(400).json({ message: "Punch out must be after punch in" })
+  }
+
+  if ((break_start && !break_end) || (!break_start && break_end)) {
+    return res.status(400).json({ message: "Break start and break end must both be set" })
+  }
+
+  if (break_start && break_end) {
+    if (break_end <= break_start) {
+      return res.status(400).json({ message: "Break end must be after break start" })
+    }
+    if (break_start < punch_in || break_end > punch_out) {
+      return res.status(400).json({ message: "Break must be inside punch in/out time" })
+    }
   }
 
   try {
@@ -101,10 +132,12 @@ export const updateAttendance = async (req, res) => {
       `UPDATE attendance
        SET punch_in = ?,
            punch_out = ?,
+           break_start = ?,
+           break_end = ?,
            source = 'manual',
            updated_at = NOW()
        WHERE id = ? AND shop_id = ?`,
-      [punch_in, punch_out, id, shopId]
+      [punch_in, punch_out, break_start || null, break_end || null, id, shopId]
     )
 
     res.json({ success: true })

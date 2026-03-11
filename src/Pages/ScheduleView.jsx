@@ -16,22 +16,12 @@ function formatLocalDate(date) {
 }
 
 function getMonday(dateInput) {
-  const d =
-    typeof dateInput === "string" ? parseLocalDate(dateInput) : new Date(dateInput)
-
+  const d = typeof dateInput === "string" ? parseLocalDate(dateInput) : new Date(dateInput)
   d.setHours(0, 0, 0, 0)
-
   const day = d.getDay()
   const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
-
   return d
-}
-
-function addDaysLocal(dateStr, days) {
-  const d = parseLocalDate(dateStr)
-  d.setDate(d.getDate() + days)
-  return formatLocalDate(d)
 }
 
 function normalizeDateOnly(value) {
@@ -113,15 +103,12 @@ export default function ScheduleView() {
   const downloadPdf = async () => {
     try {
       const res = await scheduleApi.downloadSchedulePdf(weekStart)
-
       const blob = new Blob([res.data], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
-
       const a = document.createElement("a")
       a.href = url
       a.download = `weekly_schedule_${weekStart}.pdf`
       a.click()
-
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error(e)
@@ -167,12 +154,7 @@ export default function ScheduleView() {
         {loading ? (
           <div className="p-4 text-slate-400">Loading...</div>
         ) : (
-          <ScheduleGrid
-            employees={activeEmployees}
-            week={week}
-            schedules={schedulesMap}
-            readOnly={true}
-          />
+          <ScheduleGrid employees={activeEmployees} week={week} schedules={schedulesMap} readOnly={true} />
         )}
       </div>
     </div>
