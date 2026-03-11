@@ -356,7 +356,7 @@ export const downloadWeeklySchedulePdf = async (req, res) => {
     const weekDays = getWeekDays(weekStart)
 
     const [[shopRow]] = await pool.query(
-      `SELECT id, shop_name, owner_name, email
+      `SELECT id, shop_name, email
        FROM shops
        WHERE id = ?
        LIMIT 1`,
