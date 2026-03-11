@@ -7,7 +7,7 @@ router.use(requireAuth)
 
 router.get("/", listSchedules)
 router.post("/", createSchedule)
-router.put("/:id", updateSchedule)
+router.patch("/:id", updateSchedule)
 router.delete("/:id", deleteSchedule)
 router.get("/download-pdf", downloadWeeklySchedulePdf)
 

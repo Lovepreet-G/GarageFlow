@@ -410,4 +410,12 @@ export default function ScheduleCreate() {
         open={modal.open}
         onClose={closeModal}
         date={modal.date}
-     
+        employee={modal.employee || {}}
+        existing={modal.existing}
+        onSave={saveShiftLocally}
+        onDelete={deleteShiftLocally}
+        readOnly={modal.date ? isPastDate(modal.date) : false}
+      />
+    </div>
+  )
+}
