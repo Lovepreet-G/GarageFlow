@@ -4,33 +4,46 @@ import employeesApi from "../api/employeesApi"
 import ScheduleGrid from "../components/ScheduleGrid"
 import ScheduleShiftModal from "../components/ScheduleShiftModal"
 
-function getMonday(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1) - day
-  d.setDate(d.getDate() + diff)
+function parseLocalDate(iso) {
+  const [y, m, d] = String(iso).split("-").map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
+function formatLocalDate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+function getMonday(dateInput) {
+  const d =
+    typeof dateInput === "string" ? parseLocalDate(dateInput) : new Date(dateInput)
+
   d.setHours(0, 0, 0, 0)
+
+  const day = d.getDay() // Sun=0 ... Sat=6
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+
   return d
 }
 
-function fmt(date) {
-  return new Date(date).toISOString().slice(0, 10)
+function addDaysLocal(dateStr, days) {
+  const d = parseLocalDate(dateStr)
+  d.setDate(d.getDate() + days)
+  return formatLocalDate(d)
 }
 
 function normalizeDateOnly(value) {
   if (!value) return null
-  return new Date(value).toISOString().slice(0, 10)
-}
-
-function addDays(dateStr, days) {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + days)
-  return fmt(d)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value)
+  return formatLocalDate(new Date(value))
 }
 
 function weekLabel(weekStart) {
-  const start = new Date(weekStart)
-  const end = new Date(weekStart)
+  const start = parseLocalDate(weekStart)
+  const end = parseLocalDate(weekStart)
   end.setDate(end.getDate() + 6)
   return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
 }
@@ -39,14 +52,14 @@ function isPastDate(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const d = new Date(dateStr)
+  const d = parseLocalDate(dateStr)
   d.setHours(0, 0, 0, 0)
 
   return d < today
 }
 
 export default function ScheduleCreate() {
-  const [weekStart, setWeekStart] = useState(fmt(getMonday(new Date())))
+  const [weekStart, setWeekStart] = useState(formatLocalDate(getMonday(new Date())))
   const [copyWeekStart, setCopyWeekStart] = useState("")
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(false)
@@ -63,11 +76,11 @@ export default function ScheduleCreate() {
   })
 
   const week = useMemo(() => {
-    const start = new Date(weekStart)
+    const start = parseLocalDate(weekStart)
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start)
       d.setDate(start.getDate() + i)
-      return fmt(d)
+      return formatLocalDate(d)
     })
   }, [weekStart])
 
@@ -119,11 +132,20 @@ export default function ScheduleCreate() {
     load()
   }, [weekStart])
 
-  const goPrevWeek = () => setWeekStart((prev) => addDays(prev, -7))
-  const goNextWeek = () => setWeekStart((prev) => addDays(prev, 7))
+  const goPrevWeek = () => {
+    const monday = getMonday(weekStart)
+    monday.setDate(monday.getDate() - 7)
+    setWeekStart(formatLocalDate(monday))
+  }
+
+  const goNextWeek = () => {
+    const monday = getMonday(weekStart)
+    monday.setDate(monday.getDate() + 7)
+    setWeekStart(formatLocalDate(monday))
+  }
 
   const handleWeekInput = (value) => {
-    setWeekStart(fmt(getMonday(value)))
+    setWeekStart(formatLocalDate(getMonday(value)))
   }
 
   const openCell = (employee, date) => {
@@ -238,7 +260,7 @@ export default function ScheduleCreate() {
       return
     }
 
-    const normalizedCopyWeek = fmt(getMonday(copyWeekStart))
+    const normalizedCopyWeek = formatLocalDate(getMonday(copyWeekStart))
 
     if (normalizedCopyWeek >= weekStart) {
       alert("You can only copy from a previous week")
@@ -262,11 +284,11 @@ export default function ScheduleCreate() {
             const emp = activeEmployees.find((e) => String(e.id) === String(s.employee_id))
             if (!emp) continue
 
-            const sourceMonday = new Date(normalizedCopyWeek)
-            const sourceDate = new Date(s.work_date)
+            const sourceMonday = parseLocalDate(normalizedCopyWeek)
+            const sourceDate = parseLocalDate(s.work_date)
             const dayOffset = Math.round((sourceDate - sourceMonday) / (1000 * 60 * 60 * 24))
 
-            const targetDate = addDays(weekStart, dayOffset)
+            const targetDate = addDaysLocal(weekStart, dayOffset)
             if (isPastDate(targetDate)) continue
 
             const key = `${s.employee_id}_${targetDate}`
@@ -345,48 +367,59 @@ export default function ScheduleCreate() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="text-2xl font-extrabold">Create Schedule</div>
-          <div className="text-xs text-slate-400">
-            When changing weeks, previously saved schedules auto-load into the table
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-2xl font-extrabold">Create Schedule</div>
+            <div className="text-xs text-slate-400">
+              Week always runs Monday to Sunday. Switching weeks auto-loads saved schedules.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={goPrevWeek} className="px-3 py-2 rounded-xl border">
+              Prev Week
+            </button>
+
+            <input
+              type="date"
+              value={weekStart}
+              onChange={(e) => handleWeekInput(e.target.value)}
+              className="border p-2 rounded"
+            />
+
+            <button onClick={goNextWeek} className="px-3 py-2 rounded-xl border">
+              Next Week
+            </button>
+
+            <button
+              onClick={saveAll}
+              disabled={!unsavedCount || loading}
+              className="px-4 py-2 rounded-xl bg-cyan-600 text-white font-bold disabled:opacity-50"
+            >
+              {loading ? "Saving..." : `Save Schedule${unsavedCount ? ` (${unsavedCount})` : ""}`}
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={goPrevWeek} className="px-3 py-2 rounded-xl border">
-            Prev Week
-          </button>
+        <div className="bg-slate-50 border rounded-2xl p-4">
+          <div className="font-semibold text-slate-800">Copy schedule from another previous week</div>
+          <div className="text-xs text-slate-500 mt-1">
+            Pick any earlier week. Its Monday–Sunday shifts will be copied into the currently selected week.
+          </div>
 
-          <input
-            type="date"
-            value={weekStart}
-            onChange={(e) => handleWeekInput(e.target.value)}
-            className="border p-2 rounded"
-          />
+          <div className="flex flex-col sm:flex-row gap-2 mt-3">
+            <input
+              type="date"
+              value={copyWeekStart}
+              onChange={(e) => setCopyWeekStart(e.target.value)}
+              className="border p-2 rounded"
+            />
 
-          <button onClick={goNextWeek} className="px-3 py-2 rounded-xl border">
-            Next Week
-          </button>
-
-          <input
-            type="date"
-            value={copyWeekStart}
-            onChange={(e) => setCopyWeekStart(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <button onClick={copyFromSelectedWeek} className="px-3 py-2 rounded-xl border">
-            Copy From Week
-          </button>
-
-          <button
-            onClick={saveAll}
-            disabled={!unsavedCount || loading}
-            className="px-4 py-2 rounded-xl bg-cyan-600 text-white font-bold disabled:opacity-50"
-          >
-            {loading ? "Saving..." : `Save Schedule${unsavedCount ? ` (${unsavedCount})` : ""}`}
-          </button>
+            <button onClick={copyFromSelectedWeek} className="px-3 py-2 rounded-xl border bg-white">
+              Copy Selected Week
+            </button>
+          </div>
         </div>
       </div>
 

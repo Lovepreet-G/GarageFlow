@@ -3,44 +3,62 @@ import scheduleApi from "../api/scheduleApi"
 import employeesApi from "../api/employeesApi"
 import ScheduleGrid from "../components/ScheduleGrid"
 
-function getMonday(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1) - day
-  d.setDate(d.getDate() + diff)
+function parseLocalDate(iso) {
+  const [y, m, d] = String(iso).split("-").map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
+function formatLocalDate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+function getMonday(dateInput) {
+  const d =
+    typeof dateInput === "string" ? parseLocalDate(dateInput) : new Date(dateInput)
+
   d.setHours(0, 0, 0, 0)
+
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+
   return d
 }
 
-function fmt(date) {
-  return new Date(date).toISOString().slice(0, 10)
+function addDaysLocal(dateStr, days) {
+  const d = parseLocalDate(dateStr)
+  d.setDate(d.getDate() + days)
+  return formatLocalDate(d)
 }
 
-function addDays(dateStr, days) {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + days)
-  return fmt(d)
+function normalizeDateOnly(value) {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value)
+  return formatLocalDate(new Date(value))
 }
 
 function weekLabel(weekStart) {
-  const start = new Date(weekStart)
-  const end = new Date(weekStart)
+  const start = parseLocalDate(weekStart)
+  const end = parseLocalDate(weekStart)
   end.setDate(end.getDate() + 6)
   return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
 }
 
 export default function ScheduleView() {
-  const [weekStart, setWeekStart] = useState(fmt(getMonday(new Date())))
+  const [weekStart, setWeekStart] = useState(formatLocalDate(getMonday(new Date())))
   const [employees, setEmployees] = useState([])
   const [schedulesMap, setSchedulesMap] = useState({})
   const [loading, setLoading] = useState(false)
 
   const week = useMemo(() => {
-    const start = new Date(weekStart)
+    const start = parseLocalDate(weekStart)
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start)
       d.setDate(start.getDate() + i)
-      return fmt(d)
+      return formatLocalDate(d)
     })
   }, [weekStart])
 
@@ -56,7 +74,8 @@ export default function ScheduleView() {
       const scheds = sRes.data.schedules || []
 
       const map = {}
-      for (const s of scheds) {
+      for (const raw of scheds) {
+        const s = { ...raw, work_date: normalizeDateOnly(raw.work_date) }
         map[`${s.employee_id}_${s.work_date}`] = s
       }
 
@@ -75,28 +94,40 @@ export default function ScheduleView() {
     load()
   }, [weekStart])
 
-  const goPrevWeek = () => setWeekStart((prev) => addDays(prev, -7))
-  const goNextWeek = () => setWeekStart((prev) => addDays(prev, 7))
-  const handleWeekInput = (value) => setWeekStart(fmt(getMonday(value)))
+  const goPrevWeek = () => {
+    const monday = getMonday(weekStart)
+    monday.setDate(monday.getDate() - 7)
+    setWeekStart(formatLocalDate(monday))
+  }
+
+  const goNextWeek = () => {
+    const monday = getMonday(weekStart)
+    monday.setDate(monday.getDate() + 7)
+    setWeekStart(formatLocalDate(monday))
+  }
+
+  const handleWeekInput = (value) => {
+    setWeekStart(formatLocalDate(getMonday(value)))
+  }
 
   const downloadPdf = async () => {
-  try {
-    const res = await scheduleApi.downloadSchedulePdf(weekStart)
+    try {
+      const res = await scheduleApi.downloadSchedulePdf(weekStart)
 
-    const blob = new Blob([res.data], { type: "application/pdf" })
-    const url = URL.createObjectURL(blob)
+      const blob = new Blob([res.data], { type: "application/pdf" })
+      const url = URL.createObjectURL(blob)
 
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `weekly_schedule_${weekStart}.pdf`
-    a.click()
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `weekly_schedule_${weekStart}.pdf`
+      a.click()
 
-    URL.revokeObjectURL(url)
-  } catch (e) {
-    console.error(e)
-    alert(e?.response?.data?.message || "Failed to download PDF")
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      alert(e?.response?.data?.message || "Failed to download PDF")
+    }
   }
-}
 
   const activeEmployees = employees.filter((e) => String(e.status || "").toLowerCase() === "active")
 
@@ -125,7 +156,7 @@ export default function ScheduleView() {
           </button>
 
           <button onClick={downloadPdf} className="px-3 py-2 rounded-xl border">
-            Download Week
+            Download PDF
           </button>
         </div>
       </div>

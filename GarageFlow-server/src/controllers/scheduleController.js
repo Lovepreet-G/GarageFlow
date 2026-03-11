@@ -1,10 +1,23 @@
 import pool from "../config/db.js"
 import puppeteer from "puppeteer"
 
+function parseLocalDate(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
 function toDateOnly(value) {
   if (!value) return null
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value
+  }
+
   const d = new Date(value)
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
 }
 
 function normalizeScheduleRow(row) {
@@ -15,9 +28,10 @@ function normalizeScheduleRow(row) {
 }
 
 function getWeekRange(weekStart) {
-  const start = new Date(weekStart)
+  const start = parseLocalDate(weekStart)
   const end = new Date(start)
   end.setDate(start.getDate() + 6)
+
   return {
     start: toDateOnly(start),
     end: toDateOnly(end),
@@ -32,7 +46,7 @@ function isPastWorkDate(workDate) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const d = new Date(workDate)
+  const d = parseLocalDate(workDate)
   d.setHours(0, 0, 0, 0)
 
   return d < today
@@ -48,7 +62,7 @@ function escapeHtml(s = "") {
 }
 
 function getWeekDays(weekStart) {
-  const start = new Date(weekStart)
+  const start = parseLocalDate(weekStart)
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start)
     d.setDate(start.getDate() + i)
