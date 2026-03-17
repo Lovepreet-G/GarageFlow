@@ -200,15 +200,17 @@ export const createSchedule = async (req, res) => {
 
     await pool.query(
       `INSERT INTO attendance
-       (shop_id, employee_id, work_date, scheduled_start, scheduled_end, punch_in, punch_out, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'schedule')
+       (shop_id, employee_id, work_date, scheduled_start, scheduled_end, punch_in, punch_out, break_start, break_end, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'schedule')
        ON DUPLICATE KEY UPDATE
          scheduled_start = VALUES(scheduled_start),
          scheduled_end = VALUES(scheduled_end),
          punch_in = CASE WHEN source = 'schedule' THEN VALUES(punch_in) ELSE punch_in END,
          punch_out = CASE WHEN source = 'schedule' THEN VALUES(punch_out) ELSE punch_out END,
+         break_start = CASE WHEN source = 'schedule' THEN VALUES(break_start) ELSE break_start END,
+         break_end = CASE WHEN source = 'schedule' THEN VALUES(break_end) ELSE break_end END,
          updated_at = NOW()`,
-      [shopId, employee_id, work_date, start_time, end_time, start_time, end_time]
+      [shopId, employee_id, work_date, start_time, end_time, start_time, end_time, break_start || null, break_end || null]
     )
 
     res.status(201).json({ id: result.insertId })
@@ -293,6 +295,8 @@ export const updateSchedule = async (req, res) => {
            scheduled_end = ?,
            punch_in = CASE WHEN source = 'schedule' THEN ? ELSE punch_in END,
            punch_out = CASE WHEN source = 'schedule' THEN ? ELSE punch_out END,
+            break_start = CASE WHEN source = 'schedule' THEN ? ELSE break_start END,
+           break_end = CASE WHEN source = 'schedule' THEN ? ELSE break_end END,
            updated_at = NOW()
        WHERE shop_id = ? AND employee_id = ? AND work_date = ?`,
       [
@@ -301,6 +305,8 @@ export const updateSchedule = async (req, res) => {
         nextStart,
         nextEnd,
         shopId,
+        nextBreakStart || null,
+        nextBreakEnd || null,
         current.employee_id,
         current.work_date,
       ]
