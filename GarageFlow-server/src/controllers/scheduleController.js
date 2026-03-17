@@ -304,9 +304,9 @@ export const updateSchedule = async (req, res) => {
         nextEnd,
         nextStart,
         nextEnd,
-        shopId,
         nextBreakStart || null,
         nextBreakEnd || null,
+        shopId,
         current.employee_id,
         current.work_date,
       ]
