@@ -7,11 +7,11 @@ function toTitleCase(str = "") {
     .toLowerCase()
     .split(" ")
     .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ")
 }
 
-function Header({ onMenuClick }) {
+function Header({ onMenuClick, sidebarOpen }) {
   const navigate = useNavigate()
   const [showLogout, setShowLogout] = useState(false)
 
@@ -33,35 +33,33 @@ function Header({ onMenuClick }) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b">
-        <div className="h-full px-4 flex items-center justify-between gap-3">
-          {/* Left: Hamburger (mobile) + Logo */}
-          <div className="flex items-center gap-3 min-w-[120px]">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b bg-white">
+        <div className="flex h-full items-center justify-between gap-3 px-4">
+          <div className="flex min-w-[120px] items-center gap-3">
             <button
               type="button"
               onClick={onMenuClick}
-              className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-slate-100"
-              aria-label="Open menu"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+              aria-label={sidebarOpen ? "Close menu" : "Open menu"}
             >
-              ☰
+              ≡
             </button>
 
             <div className="flex items-center gap-2">
               <img src={logoHalf} alt="GarageFlow" className="h-9 w-9 object-contain" />
-              <div className="hidden sm:block font-semibold tracking-wide">
+              <div className="hidden font-semibold tracking-wide sm:block">
                 GARAGE<span className="text-cyan-600">FLOW</span>
               </div>
             </div>
           </div>
 
-          {/* Center: Shop name (click -> profile) */}
           <button
             type="button"
             onClick={() => navigate("/profile")}
-            className="text-center group flex-1 "
+            className="group flex-1 text-center"
             title="Open Profile"
           >
-            <div className="text-sm md:text-base font-semibold tracking-wide group-hover:underline">
+            <div className="text-sm font-semibold tracking-wide group-hover:underline md:text-base">
               {shopName}
             </div>
             <div className="text-[11px] text-slate-500">
@@ -69,11 +67,10 @@ function Header({ onMenuClick }) {
             </div>
           </button>
 
-          {/* Right: Logout */}
-          <div className="min-w-[120px] flex justify-end">
+          <div className="flex min-w-[120px] justify-end">
             <button
               onClick={() => setShowLogout(true)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50 text-sm font-semibold"
+              className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
             >
               SIGN OUT
             </button>
@@ -81,25 +78,22 @@ function Header({ onMenuClick }) {
         </div>
       </header>
 
-      {/* Logout confirmation */}
       {showLogout && (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl border p-6">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl border bg-white p-6">
             <div className="text-lg font-bold">Confirm logout</div>
-            <div className="text-sm text-slate-600 mt-1">
-              Are you sure you want to log out?
-            </div>
+            <div className="mt-1 text-sm text-slate-600">Are you sure you want to log out?</div>
 
-            <div className="flex justify-end gap-2 mt-5">
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setShowLogout(false)}
-                className="px-4 py-2 rounded-lg border hover:bg-slate-50"
+                className="rounded-lg border px-4 py-2 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 onClick={logout}
-                className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-red-700"
+                className="rounded-lg bg-slate-900 px-4 py-2 text-white hover:bg-red-700"
               >
                 Log out
               </button>

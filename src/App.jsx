@@ -27,18 +27,29 @@ import Landing from "./Pages/Landing"
 import NotFound from "./Pages/NotFound"
 
 function AppLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const handleMainClick = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024 && sidebarOpen) {
+      setSidebarOpen(false)
+    }
+  }
 
   return (
     <>
-      <Header onMenuClick={() => setSidebarOpen(true)} />
+      <Header
+        sidebarOpen={sidebarOpen}
+        onMenuClick={() => setSidebarOpen((prev) => !prev)}
+      />
 
       <div className="min-h-screen bg-slate-50">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <main
-          className="min-h-screen pt-16 lg:pl-64"
-          onClick={() => sidebarOpen && setSidebarOpen(false)}
+          className={[
+            "min-h-screen pt-16 transition-all duration-200",
+            sidebarOpen ? "lg:pl-64" : "lg:pl-0",
+          ].join(" ")}
+          onClick={handleMainClick}
         >
           <div className="p-4 sm:p-6">
             <Outlet />
