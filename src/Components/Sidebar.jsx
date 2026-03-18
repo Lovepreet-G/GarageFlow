@@ -50,6 +50,7 @@ function Sidebar({ open, onClose }) {
 
   const scheduleActive =
     location.pathname.startsWith("/schedule") || location.pathname.startsWith("/attendance")
+  const payrollActive = location.pathname.startsWith("/payroll")
 
   return (
     <>
@@ -138,6 +139,12 @@ function Sidebar({ open, onClose }) {
                 <span>Attendance</span>
               </NavLink>
             </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-2">
+            <NavLink to="/payroll" className={linkClass} onClick={handleNavClick}>
+              <span className={payrollActive ? "text-white" : ""}>PAYROLL</span>
+            </NavLink>
           </div>
         </nav>
 

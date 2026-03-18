@@ -36,6 +36,8 @@ export const listAttendance = async (req, res) => {
   const shopId = req.shop.id
   const date = req.query.date
   const weekStart = req.query.weekStart
+  const startDate = req.query.startDate
+  const endDate = req.query.endDate
 
   try {
     if (date) {
@@ -57,6 +59,17 @@ export const listAttendance = async (req, res) => {
          WHERE shop_id = ? AND work_date BETWEEN ? AND ?
          ORDER BY work_date ASC, employee_id ASC`,
         [shopId, start, end]
+      )
+      return res.json({ attendance: rows.map(normalizeAttendanceRow) })
+    }
+
+    if (startDate && endDate) {
+      const [rows] = await pool.query(
+        `SELECT *
+         FROM attendance
+         WHERE shop_id = ? AND work_date BETWEEN ? AND ?
+         ORDER BY work_date ASC, employee_id ASC`,
+        [shopId, startDate, endDate]
       )
       return res.json({ attendance: rows.map(normalizeAttendanceRow) })
     }
