@@ -35,7 +35,7 @@ function Header({ onMenuClick, sidebarOpen }) {
     <>
       <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b bg-white">
         <div className="flex h-full items-center justify-between gap-3 px-4">
-          <div className="flex min-w-[120px] items-center gap-3">
+          <div className="flex min-w-0 flex-shrink-0 items-center gap-3">
             <button
               type="button"
               onClick={onMenuClick}
@@ -53,26 +53,28 @@ function Header({ onMenuClick, sidebarOpen }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate("/profile")}
-            className="group flex-1 text-center"
-            title="Open Profile"
-          >
-            <div className="text-sm font-semibold tracking-wide group-hover:underline md:text-base">
-              {shopName}
-            </div>
-            <div className="text-[11px] text-slate-500">
-              ACTIVE <span className="font-semibold text-cyan-600">FLOW</span>
-            </div>
-          </button>
+          <div className="flex min-w-0 flex-1 justify-center px-1 sm:px-2">
+            <button
+              type="button"
+              onClick={() => navigate("/profile")}
+              className="group inline-flex max-w-[140px] flex-col items-center text-center sm:max-w-[220px]"
+              title="Open Profile"
+            >
+              <div className="truncate text-xs font-semibold tracking-wide group-hover:underline sm:text-sm md:text-base">
+                {shopName}
+              </div>
+              <div className="text-[10px] text-slate-500 sm:text-[11px]">
+                ACTIVE <span className="font-semibold text-cyan-600">FLOW</span>
+              </div>
+            </button>
+          </div>
 
-          <div className="flex min-w-[120px] justify-end">
+          <div className="flex min-w-0 flex-shrink-0 justify-end">
             <button
               onClick={() => setShowLogout(true)}
-              className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+              className="rounded-lg border bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50 sm:px-4"
             >
-              SIGN OUT
+              <span>SIGN OUT</span>
             </button>
           </div>
         </div>
