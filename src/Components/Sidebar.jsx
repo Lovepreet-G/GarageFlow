@@ -64,7 +64,7 @@ function Sidebar({ open, onClose }) {
       >
         <nav className="space-y-2 overflow-y-auto flex-1 pr-1">
           <NavLink to="/dashboard" className={linkClass} onClick={onClose}>
-            <span>▦</span> <span>DASHBOARD</span>
+            <span>♦</span> <span>DASHBOARD</span>
           </NavLink>
 
           <NavLink to="/invoices" className={linkClass} onClick={onClose}>
@@ -120,8 +120,11 @@ function Sidebar({ open, onClose }) {
               <NavLink to="/schedule/create" className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Create Schedule</span>
               </NavLink>
-              <NavLink to="/schedule" className={linkClass} onClick={onClose}>
+              <NavLink to="/schedule" end className={linkClass} onClick={onClose}>
                 <span>•</span> <span>View Schedule</span>
+              </NavLink>
+              <NavLink to="/schedule/actual-hours" className={linkClass} onClick={onClose}>
+                <span>•</span> <span>Actual Hours</span>
               </NavLink>
               <NavLink to="/attendance" className={linkClass} onClick={onClose}>
                 <span>•</span> <span>Attendance</span>

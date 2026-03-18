@@ -25,6 +25,30 @@ function formatTime12(value) {
   return `${h}:${m} ${ampm}`
 }
 
+function calculateShiftHours(startTime, endTime, breakStart, breakEnd) {
+  if (!startTime || !endTime) return 0
+
+  const toMinutes = (value) => {
+    const [hour, minute] = String(value).split(":").map(Number)
+    return hour * 60 + minute
+  }
+
+  let start = toMinutes(startTime)
+  let end = toMinutes(endTime)
+  if (end < start) end += 24 * 60
+
+  let totalMinutes = end - start
+
+  if (breakStart && breakEnd) {
+    let breakStartMinutes = toMinutes(breakStart)
+    let breakEndMinutes = toMinutes(breakEnd)
+    if (breakEndMinutes < breakStartMinutes) breakEndMinutes += 24 * 60
+    totalMinutes -= Math.max(0, breakEndMinutes - breakStartMinutes)
+  }
+
+  return Number((totalMinutes / 60).toFixed(2))
+}
+
 export default function ScheduleGrid({
   employees = [],
   week = [],
@@ -59,19 +83,37 @@ export default function ScheduleGrid({
                 <div className="text-[11px]">{w.md}</div>
               </th>
             ))}
+            <th className="p-2 text-left whitespace-nowrap min-w-[120px]">
+              <div className="font-semibold text-slate-700">Total</div>
+              <div className="text-[11px]">Week Hours</div>
+            </th>
           </tr>
         </thead>
 
         <tbody>
           {employees.length === 0 ? (
             <tr>
-              <td colSpan={week.length + 1} className="p-4 text-slate-400">
+              <td colSpan={week.length + 2} className="p-4 text-slate-400">
                 No employees
               </td>
             </tr>
           ) : (
             employees.map((emp) => {
               const inactive = String(emp?.status || "").toLowerCase() === "inactive"
+              const weeklyTotal = week.reduce((sum, date) => {
+                const schedule = schedules[`${emp.id}_${date}`]
+                if (!schedule) return sum
+
+                return (
+                  sum +
+                  calculateShiftHours(
+                    schedule.start_time,
+                    schedule.end_time,
+                    schedule.break_start,
+                    schedule.break_end
+                  )
+                )
+              }, 0)
 
               return (
                 <tr key={emp.id} className="border-t">
@@ -146,6 +188,13 @@ export default function ScheduleGrid({
                       </td>
                     )
                   })}
+
+                  <td className="p-2 align-top">
+                    <div className="min-h-[60px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="font-semibold text-slate-800">{weeklyTotal.toFixed(2)} hrs</div>
+                      <div className="mt-1 text-xs text-slate-500">Scheduled total</div>
+                    </div>
+                  </td>
                 </tr>
               )
             })

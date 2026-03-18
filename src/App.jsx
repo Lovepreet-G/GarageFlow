@@ -17,6 +17,7 @@ import EmployeeProfile from "./Pages/EmployeeProfile"
 import Departments from "./Pages/Departments"
 import ScheduleCreate from "./Pages/ScheduleCreate"
 import ScheduleView from "./Pages/ScheduleView"
+import ScheduleActualHours from "./Pages/ScheduleActualHours"
 import Attendance from "./Pages/Attendance"
 import CreateInvoice from "./Pages/CreateInvoice"
 import InvoiceView from "./Pages/InvoiceView"
@@ -128,6 +129,10 @@ export default function App() {
         <Route
           path="/schedule"
           element={<ProtectedRoute><ScheduleView /></ProtectedRoute>}
+        />
+        <Route
+          path="/schedule/actual-hours"
+          element={<ProtectedRoute><ScheduleActualHours /></ProtectedRoute>}
         />
         <Route
           path="/attendance"
