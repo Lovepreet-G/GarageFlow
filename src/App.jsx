@@ -19,6 +19,7 @@ import ScheduleCreate from "./Pages/ScheduleCreate"
 import ScheduleView from "./Pages/ScheduleView"
 import ScheduleActualHours from "./Pages/ScheduleActualHours"
 import Payroll from "./Pages/Payroll"
+import PayrollEmployeeHistory from "./Pages/PayrollEmployeeHistory"
 import Attendance from "./Pages/Attendance"
 import CreateInvoice from "./Pages/CreateInvoice"
 import InvoiceView from "./Pages/InvoiceView"
@@ -153,6 +154,10 @@ export default function App() {
         <Route
           path="/payroll"
           element={<ProtectedRoute><Payroll /></ProtectedRoute>}
+        />
+        <Route
+          path="/payroll/:employeeId"
+          element={<ProtectedRoute><PayrollEmployeeHistory /></ProtectedRoute>}
         />
         <Route
           path="/create-invoice"

@@ -516,3 +516,225 @@ export const downloadPayrollPdf = async (req, res) => {
     res.status(500).json({ message: "Failed to generate payroll PDF" })
   }
 }
+
+export const getEmployeePayrollHistory = async (req, res) => {
+  const shopId = req.shop.id
+  const employeeId = req.params.employeeId
+  const periodType = String(req.query.periodType || "weekly").toLowerCase()
+
+  if (!["weekly", "biweekly", "monthly"].includes(periodType)) {
+    return res.status(400).json({ message: "Invalid payroll period type" })
+  }
+
+  try {
+    const [[employee]] = await pool.query(
+      `SELECT id, first_name, last_name, mobile, email, hourly_rate, status
+       FROM employees
+       WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
+       LIMIT 1`,
+      [employeeId, shopId]
+    )
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" })
+    }
+
+    const [history] = await pool.query(
+      `SELECT
+         pr.id AS payroll_run_id,
+         pr.period_type,
+         pr.start_date,
+         pr.end_date,
+         pr.status,
+         pr.created_at,
+         pi.worked_days,
+         pi.worked_hours,
+         pi.hourly_rate,
+         pi.gross_pay,
+         pi.bonus_amount,
+         pi.penalty_amount,
+         pi.manual_adjustment,
+         pi.final_pay,
+         pi.notes
+       FROM payroll_runs pr
+       INNER JOIN payroll_items pi ON pi.payroll_run_id = pr.id
+       WHERE pr.shop_id = ?
+         AND pi.employee_id = ?
+         AND pr.period_type = ?
+       ORDER BY pr.start_date DESC, pr.id DESC`,
+      [shopId, employeeId, periodType]
+    )
+
+    const summary = history.reduce(
+      (totals, row) => {
+        totals.periods += 1
+        totals.worked_hours += Number(row.worked_hours || 0)
+        totals.gross_pay += Number(row.gross_pay || 0)
+        totals.bonus_amount += Number(row.bonus_amount || 0)
+        totals.penalty_amount += Number(row.penalty_amount || 0)
+        totals.manual_adjustment += Number(row.manual_adjustment || 0)
+        totals.final_pay += Number(row.final_pay || 0)
+        return totals
+      },
+      {
+        periods: 0,
+        worked_hours: 0,
+        gross_pay: 0,
+        bonus_amount: 0,
+        penalty_amount: 0,
+        manual_adjustment: 0,
+        final_pay: 0,
+      }
+    )
+
+    for (const key of Object.keys(summary)) {
+      if (key !== "periods") {
+        summary[key] = Number(summary[key].toFixed(2))
+      }
+    }
+
+    const chart_points = history
+      .slice()
+      .reverse()
+      .map((row) => ({
+        label: `${toDateOnly(row.start_date)}\n${toDateOnly(row.end_date)}`,
+        start_date: toDateOnly(row.start_date),
+        end_date: toDateOnly(row.end_date),
+        worked_hours: Number(row.worked_hours || 0),
+        gross_pay: Number(row.gross_pay || 0),
+        final_pay: Number(row.final_pay || 0),
+      }))
+
+    res.json({
+      employee: {
+        ...employee,
+        employee_name: `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || `#${employee.id}`,
+      },
+      period_type: periodType,
+      history: history.map((row) => ({
+        ...row,
+        start_date: toDateOnly(row.start_date),
+        end_date: toDateOnly(row.end_date),
+        worked_hours: Number(row.worked_hours || 0),
+        hourly_rate: Number(row.hourly_rate || 0),
+        gross_pay: Number(row.gross_pay || 0),
+        bonus_amount: Number(row.bonus_amount || 0),
+        penalty_amount: Number(row.penalty_amount || 0),
+        manual_adjustment: Number(row.manual_adjustment || 0),
+        final_pay: Number(row.final_pay || 0),
+      })),
+      analytics: {
+        summary,
+        chart_points,
+      },
+    })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ message: "Failed to load employee payroll history" })
+  }
+}
+
+export const downloadEmployeePayrollPdf = async (req, res) => {
+  const shopId = req.shop.id
+  const employeeId = req.params.employeeId
+  const periodType = String(req.query.periodType || "weekly").toLowerCase()
+  const startDate = req.query.startDate
+
+  if (!["weekly", "biweekly", "monthly"].includes(periodType)) {
+    return res.status(400).json({ message: "Invalid payroll period type" })
+  }
+
+  if (!startDate) {
+    return res.status(400).json({ message: "startDate is required" })
+  }
+
+  try {
+    const data = await computePayrollSummary({ shopId, periodType, startDate, employeeId })
+    const row = data.rows[0]
+
+    if (!row) {
+      return res.status(404).json({ message: "Payroll statement not found" })
+    }
+
+    const [[shopRow]] = await pool.query(
+      `SELECT shop_name
+       FROM shops
+       WHERE id = ?
+       LIMIT 1`,
+      [shopId]
+    )
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Employee Payroll Statement</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #1f2937; margin: 28px; }
+            .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+            .meta { font-size: 12px; color: #6b7280; line-height: 1.8; margin-bottom: 18px; }
+            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }
+            .card { border: 1px solid #d1d5db; border-radius: 12px; padding: 12px; background: #f8fafc; }
+            .label { font-size: 11px; text-transform: uppercase; color: #64748b; }
+            .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            td { border: 1px solid #d1d5db; padding: 10px; font-size: 12px; }
+            .left { background: #f8fafc; font-weight: 700; width: 35%; }
+          </style>
+        </head>
+        <body>
+          <div class="title">Employee Payroll Statement</div>
+          <div class="meta">
+            <div><strong>Shop:</strong> ${escapeHtml(shopRow?.shop_name || "GarageFlow Shop")}</div>
+            <div><strong>Employee:</strong> ${escapeHtml(row.employee_name)}</div>
+            <div><strong>Period:</strong> ${escapeHtml(data.period.start_date)} to ${escapeHtml(data.period.end_date)}</div>
+            <div><strong>Type:</strong> ${escapeHtml(periodType)}</div>
+            <div><strong>Status:</strong> ${escapeHtml(data.payroll_run?.status || "draft preview")}</div>
+          </div>
+
+          <div class="grid">
+            <div class="card"><div class="label">Worked Hours</div><div class="value">${escapeHtml(String(row.worked_hours.toFixed(2)))}</div></div>
+            <div class="card"><div class="label">Final Pay</div><div class="value">${escapeHtml(formatCurrency(row.final_pay))}</div></div>
+          </div>
+
+          <table>
+            <tr><td class="left">Worked Days</td><td>${escapeHtml(String(row.worked_days))}</td></tr>
+            <tr><td class="left">Hourly Rate</td><td>${escapeHtml(formatCurrency(row.hourly_rate))}</td></tr>
+            <tr><td class="left">Gross Pay</td><td>${escapeHtml(formatCurrency(row.gross_pay))}</td></tr>
+            <tr><td class="left">Bonus</td><td>${escapeHtml(formatCurrency(row.bonus_amount))}</td></tr>
+            <tr><td class="left">Penalty</td><td>${escapeHtml(formatCurrency(row.penalty_amount))}</td></tr>
+            <tr><td class="left">Manual Adjustment</td><td>${escapeHtml(formatCurrency(row.manual_adjustment))}</td></tr>
+            <tr><td class="left">Final Pay</td><td>${escapeHtml(formatCurrency(row.final_pay))}</td></tr>
+            <tr><td class="left">Notes</td><td>${escapeHtml(row.notes || "-")}</td></tr>
+          </table>
+        </body>
+      </html>
+    `
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    })
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: "networkidle0" })
+
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "16px", right: "16px", bottom: "16px", left: "16px" },
+    })
+
+    await browser.close()
+
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="employee_payroll_${employeeId}_${data.period.start_date}.pdf"`
+    )
+    res.send(pdf)
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ message: "Failed to generate employee payroll PDF" })
+  }
+}

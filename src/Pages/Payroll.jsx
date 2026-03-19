@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import payrollApi from "../api/payrollApi"
 
 function parseLocalDate(iso) {
@@ -73,6 +74,7 @@ function buildDraftRows(rows) {
 }
 
 export default function Payroll() {
+  const navigate = useNavigate()
   const [periodType, setPeriodType] = useState("weekly")
   const [periodStart, setPeriodStart] = useState(formatLocalDate(getMonday(new Date())))
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("all")
@@ -432,25 +434,27 @@ export default function Payroll() {
         <span>Status: {payrollRun?.status || "draft preview"}</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-[20px] border bg-white p-4">
-          <div className="text-xs text-slate-500">Employees</div>
-          <div className="mt-2 text-2xl font-extrabold">{summary.employees}</div>
-        </div>
-
-        <div className="rounded-[20px] border bg-white p-4">
-          <div className="text-xs text-slate-500">Worked Hours</div>
-          <div className="mt-2 text-2xl font-extrabold">{formatHours(summary.hours)}</div>
-        </div>
-
-        <div className="rounded-[20px] border bg-white p-4">
-          <div className="text-xs text-slate-500">Gross Payroll</div>
-          <div className="mt-2 text-2xl font-extrabold">{formatCurrency(summary.gross)}</div>
-        </div>
-
-        <div className="rounded-[20px] border bg-white p-4">
-          <div className="text-xs text-slate-500">Final Payroll</div>
-          <div className="mt-2 text-2xl font-extrabold text-cyan-700">{formatCurrency(summary.final)}</div>
+      <div className="overflow-x-auto rounded-[24px] border bg-white">
+        <div className="flex min-w-[760px] items-stretch">
+          {[
+            { label: "Employees", value: summary.employees, tone: "text-slate-900" },
+            { label: "Worked Hours", value: formatHours(summary.hours), tone: "text-slate-900" },
+            { label: "Gross Pay", value: formatCurrency(summary.gross), tone: "text-slate-900" },
+            { label: "Final Pay", value: formatCurrency(summary.final), tone: "text-cyan-700" },
+          ].map((item, index) => (
+            <div
+              key={item.label}
+              className={[
+                "flex-1 px-5 py-4",
+                index !== 3 ? "border-r border-slate-200" : "",
+              ].join(" ")}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {item.label}
+              </div>
+              <div className={`mt-2 text-2xl font-extrabold ${item.tone}`}>{item.value}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -481,7 +485,13 @@ export default function Payroll() {
                 {visibleRows.map((row) => (
                   <tr key={row.employee_id} className="border-b align-top last:border-b-0">
                     <td className="px-4 py-4">
-                      <div className="font-semibold text-slate-900">{row.employee_name}</div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/payroll/${row.employee_id}`)}
+                        className="font-semibold text-slate-900 hover:underline"
+                      >
+                        {row.employee_name}
+                      </button>
                       <div className="text-xs text-slate-500">{row.mobile || row.email || "No contact"}</div>
                     </td>
                     <td className="px-4 py-4 text-slate-600">{row.worked_days}</td>
