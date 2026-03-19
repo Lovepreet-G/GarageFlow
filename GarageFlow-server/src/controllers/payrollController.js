@@ -102,7 +102,7 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
   const employeeParams = [shopId]
   let employeeFilter = ""
   if (employeeId) {
-    employeeFilter = " AND id = ?"
+    employeeFilter = " AND e.id = ?"
     employeeParams.push(employeeId)
   }
 
