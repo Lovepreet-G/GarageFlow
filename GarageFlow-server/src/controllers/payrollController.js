@@ -247,11 +247,11 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
      FROM payroll_runs pr
      INNER JOIN payroll_items pi ON pi.payroll_run_id = pr.id
      WHERE pr.shop_id = ?
-       AND pr.period_type = ?
+       AND pr.period_type = 'weekly'
        AND YEAR(pr.start_date) = ?
      GROUP BY DATE_FORMAT(pr.start_date, '%Y-%m')
      ORDER BY month_key ASC`,
-    [shopId, periodType, yearlyTrendYear]
+    [shopId, yearlyTrendYear]
   )
 
   const [auditRows] = payrollRun?.id
@@ -285,6 +285,7 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
         final_pay: Number(row.final_pay || 0),
       })),
       trend_year: yearlyTrendYear,
+      trend_source_period: "weekly",
     },
     audit_logs: auditRows.map((row) => ({
       ...row,

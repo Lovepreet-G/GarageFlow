@@ -73,12 +73,15 @@ function buildDraftRows(rows) {
   return drafts
 }
 
-function TrendChart({ data }) {
+function TrendChart({ data, sourcePeriod }) {
   const maxValue = Math.max(...data.map((item) => Number(item.final_pay || 0)), 0)
 
   return (
     <div className="rounded-[20px] border bg-white p-4">
       <div className="text-sm font-semibold text-slate-800">Yearly Payroll Trend</div>
+      <div className="mt-1 text-xs text-slate-500">
+        Based on saved {sourcePeriod} payroll runs.
+      </div>
       {data.length === 0 ? (
         <div className="mt-4 text-sm text-slate-400">No saved payroll history yet for this year.</div>
       ) : (
@@ -141,6 +144,7 @@ export default function Payroll() {
   const departmentBreakdown = payrollData?.analytics?.department_breakdown || []
   const yearlyTrend = payrollData?.analytics?.yearly_trend || []
   const trendYear = payrollData?.analytics?.trend_year || new Date().getFullYear()
+  const trendSourcePeriod = payrollData?.analytics?.trend_source_period || "weekly"
   const auditLogs = payrollData?.audit_logs || []
 
   const filteredEmployees = useMemo(() => {
@@ -536,7 +540,7 @@ export default function Payroll() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <TrendChart data={yearlyTrend} />
+          <TrendChart data={yearlyTrend} sourcePeriod={trendSourcePeriod} />
 
           <div className="rounded-[20px] border bg-white p-4">
             <div className="text-sm font-semibold text-slate-800">Department Breakdown</div>
