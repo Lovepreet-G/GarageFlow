@@ -12,6 +12,7 @@ import employeeRoutes from "./routes/employeeRoutes.js"
 import departmentRoutes from "./routes/departmentRoutes.js"
 import scheduleRoutes from "./routes/scheduleRoutes.js"
 import attendanceRoutes from "./routes/attendanceRoutes.js"
+import payrollRoutes from "./routes/payrollRoutes.js"
 import path from "path"
 import { fileURLToPath } from "url"
 
@@ -77,6 +78,7 @@ app.use("/api/employees", employeeRoutes)
 app.use("/api/departments", departmentRoutes)
 app.use("/api/schedules", scheduleRoutes)
 app.use("/api/attendance", attendanceRoutes)
+app.use("/api/payroll", payrollRoutes)
 
 app.listen(5000, () => {
   console.log("GarageFlow API running on http://localhost:5000")

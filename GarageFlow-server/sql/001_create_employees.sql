@@ -102,3 +102,39 @@ ALTER TABLE employees
 ALTER TABLE attendance
   ADD COLUMN break_start TIME NULL AFTER punch_out,
   ADD COLUMN break_end TIME NULL AFTER break_start;
+
+CREATE TABLE IF NOT EXISTS `payroll_runs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `shop_id` int NOT NULL,
+  `period_type` varchar(32) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'draft',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `u_payroll_run_period` (`shop_id`, `period_type`, `start_date`, `end_date`),
+  INDEX (`shop_id`),
+  INDEX (`start_date`),
+  INDEX (`end_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `payroll_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `payroll_run_id` int NOT NULL,
+  `employee_id` int NOT NULL,
+  `worked_days` int NOT NULL DEFAULT 0,
+  `worked_hours` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `hourly_rate` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `gross_pay` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `bonus_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `penalty_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `manual_adjustment` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `final_pay` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `u_payroll_item_emp` (`payroll_run_id`, `employee_id`),
+  INDEX (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
