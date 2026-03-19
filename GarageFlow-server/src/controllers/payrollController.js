@@ -87,6 +87,14 @@ async function getExistingPayrollRun(shopId, periodType, startDate, endDate) {
   return rows[0] || null
 }
 
+async function logPayrollAction({ payrollRunId, shopId, action, actorLabel, details }) {
+  await pool.query(
+    `INSERT INTO payroll_audit_logs (payroll_run_id, shop_id, action, actor_label, details)
+     VALUES (?, ?, ?, ?, ?)`,
+    [payrollRunId, shopId, action, actorLabel || "Shop User", details ? JSON.stringify(details) : null]
+  )
+}
+
 async function computePayrollSummary({ shopId, periodType, startDate, employeeId = null }) {
   const { start, end } = getPeriodRange(periodType, startDate)
   const payrollRun = await getExistingPayrollRun(shopId, periodType, start, end)
@@ -99,10 +107,12 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
   }
 
   const [employees] = await pool.query(
-    `SELECT id, first_name, last_name, mobile, email, hourly_rate, status
+    `SELECT e.id, e.first_name, e.last_name, e.mobile, e.email, e.hourly_rate, e.status, d.name AS department_name
      FROM employees
-     WHERE shop_id = ? AND deleted_at IS NULL AND LOWER(COALESCE(status, 'active')) = 'active'${employeeFilter}
-     ORDER BY first_name ASC, last_name ASC`,
+     e
+     LEFT JOIN departments d ON d.id = e.department_id AND d.shop_id = e.shop_id AND d.deleted_at IS NULL
+     WHERE e.shop_id = ? AND e.deleted_at IS NULL AND LOWER(COALESCE(e.status, 'active')) = 'active'${employeeFilter}
+     ORDER BY e.first_name ASC, e.last_name ASC`,
     employeeParams
   )
 
@@ -169,6 +179,7 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
       employee_name: `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || `#${employee.id}`,
       mobile: employee.mobile || "",
       email: employee.email || "",
+      department_name: employee.department_name || "Unassigned",
       hourly_rate: hourlyRate,
       worked_days: attendance.worked_days,
       worked_hours: workedHours,
@@ -209,6 +220,51 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
     }
   }
 
+  const departmentMap = {}
+  for (const row of rows) {
+    const key = row.department_name || "Unassigned"
+    if (!departmentMap[key]) {
+      departmentMap[key] = { department_name: key, employees: 0, worked_hours: 0, final_pay: 0 }
+    }
+    departmentMap[key].employees += 1
+    departmentMap[key].worked_hours += Number(row.worked_hours || 0)
+    departmentMap[key].final_pay += Number(row.final_pay || 0)
+  }
+
+  const department_breakdown = Object.values(departmentMap)
+    .map((item) => ({
+      ...item,
+      worked_hours: Number(item.worked_hours.toFixed(2)),
+      final_pay: Number(item.final_pay.toFixed(2)),
+    }))
+    .sort((a, b) => b.final_pay - a.final_pay)
+
+  const yearlyTrendYear = parseLocalDate(start).getFullYear()
+  const [yearlyTrendRows] = await pool.query(
+    `SELECT DATE_FORMAT(pr.start_date, '%Y-%m') AS month_key,
+            SUM(pi.worked_hours) AS worked_hours,
+            SUM(pi.final_pay) AS final_pay
+     FROM payroll_runs pr
+     INNER JOIN payroll_items pi ON pi.payroll_run_id = pr.id
+     WHERE pr.shop_id = ?
+       AND pr.period_type = ?
+       AND YEAR(pr.start_date) = ?
+     GROUP BY DATE_FORMAT(pr.start_date, '%Y-%m')
+     ORDER BY month_key ASC`,
+    [shopId, periodType, yearlyTrendYear]
+  )
+
+  const [auditRows] = payrollRun?.id
+    ? await pool.query(
+        `SELECT id, action, actor_label, details, created_at
+         FROM payroll_audit_logs
+         WHERE payroll_run_id = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 20`,
+        [payrollRun.id]
+      )
+    : [[]]
+
   return {
     period: { period_type: periodType, start_date: start, end_date: end },
     payroll_run: payrollRun
@@ -221,14 +277,27 @@ async function computePayrollSummary({ shopId, periodType, startDate, employeeId
       : null,
     rows,
     summary,
+    analytics: {
+      department_breakdown,
+      yearly_trend: yearlyTrendRows.map((row) => ({
+        month_key: row.month_key,
+        worked_hours: Number(row.worked_hours || 0),
+        final_pay: Number(row.final_pay || 0),
+      })),
+      trend_year: yearlyTrendYear,
+    },
+    audit_logs: auditRows.map((row) => ({
+      ...row,
+      details: row.details ? JSON.parse(row.details) : null,
+    })),
   }
 }
 
-async function upsertPayrollRun({ shopId, periodType, startDate, status, items }) {
+async function upsertPayrollRun({ shopId, periodType, startDate, status, items, actorLabel }) {
   const { start, end } = getPeriodRange(periodType, startDate)
   let payrollRun = await getExistingPayrollRun(shopId, periodType, start, end)
 
-  if (payrollRun?.status === "finalized") {
+  if (payrollRun?.status === "finalized" || payrollRun?.status === "paid") {
     throw new Error("This payroll period has been finalized and can no longer be edited")
   }
 
@@ -299,6 +368,19 @@ async function upsertPayrollRun({ shopId, periodType, startDate, status, items }
     )
   }
 
+  await logPayrollAction({
+    payrollRunId: payrollRun.id,
+    shopId,
+    action: status === "finalized" ? "finalized" : "saved_draft",
+    actorLabel,
+    details: {
+      periodType,
+      startDate: start,
+      endDate: end,
+      itemCount: (items || []).length,
+    },
+  })
+
   return computePayrollSummary({ shopId, periodType, startDate })
 }
 
@@ -333,6 +415,10 @@ export const savePayrollDraft = async (req, res) => {
     return res.status(400).json({ message: "periodType and startDate are required" })
   }
 
+  if (String(periodType).toLowerCase() !== "weekly") {
+    return res.status(400).json({ message: "Only weekly payroll can be saved or finalized" })
+  }
+
   try {
     const summary = await upsertPayrollRun({
       shopId,
@@ -340,6 +426,7 @@ export const savePayrollDraft = async (req, res) => {
       startDate,
       status: "draft",
       items,
+      actorLabel: req.shop?.shop_name || "Shop User",
     })
     res.json(summary)
   } catch (e) {
@@ -357,6 +444,10 @@ export const finalizePayroll = async (req, res) => {
     return res.status(400).json({ message: "periodType and startDate are required" })
   }
 
+  if (String(periodType).toLowerCase() !== "weekly") {
+    return res.status(400).json({ message: "Only weekly payroll can be saved or finalized" })
+  }
+
   try {
     const summary = await upsertPayrollRun({
       shopId,
@@ -364,12 +455,72 @@ export const finalizePayroll = async (req, res) => {
       startDate,
       status: "finalized",
       items,
+      actorLabel: req.shop?.shop_name || "Shop User",
     })
     res.json(summary)
   } catch (e) {
     console.error(e)
     const status = String(e.message || "").includes("finalized") ? 400 : 500
     res.status(status).json({ message: e.message || "Failed to finalize payroll" })
+  }
+}
+
+export const markPayrollPaid = async (req, res) => {
+  const shopId = req.shop.id
+  const { periodType, startDate } = req.body
+
+  if (!periodType || !startDate) {
+    return res.status(400).json({ message: "periodType and startDate are required" })
+  }
+
+  if (String(periodType).toLowerCase() !== "weekly") {
+    return res.status(400).json({ message: "Only weekly payroll can be marked as paid" })
+  }
+
+  try {
+    const { start, end } = getPeriodRange(String(periodType).toLowerCase(), startDate)
+    const payrollRun = await getExistingPayrollRun(shopId, String(periodType).toLowerCase(), start, end)
+
+    if (!payrollRun) {
+      return res.status(404).json({ message: "Payroll run not found" })
+    }
+
+    if (payrollRun.status === "paid") {
+      return res.status(400).json({ message: "This payroll period is already marked as paid" })
+    }
+
+    if (payrollRun.status !== "finalized") {
+      return res.status(400).json({ message: "Finalize payroll before marking it as paid" })
+    }
+
+    await pool.query(
+      `UPDATE payroll_runs
+       SET status = 'paid', updated_at = NOW()
+       WHERE id = ?`,
+      [payrollRun.id]
+    )
+
+    await logPayrollAction({
+      payrollRunId: payrollRun.id,
+      shopId,
+      action: "marked_paid",
+      actorLabel: req.shop?.shop_name || "Shop User",
+      details: {
+        periodType,
+        startDate: start,
+        endDate: end,
+      },
+    })
+
+    const summary = await computePayrollSummary({
+      shopId,
+      periodType: String(periodType).toLowerCase(),
+      startDate,
+    })
+    res.json(summary)
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ message: "Failed to mark payroll as paid" })
   }
 }
 

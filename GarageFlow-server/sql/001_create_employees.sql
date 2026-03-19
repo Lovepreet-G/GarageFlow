@@ -138,3 +138,16 @@ CREATE TABLE IF NOT EXISTS `payroll_items` (
   UNIQUE KEY `u_payroll_item_emp` (`payroll_run_id`, `employee_id`),
   INDEX (`employee_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `payroll_audit_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `payroll_run_id` int NOT NULL,
+  `shop_id` int NOT NULL,
+  `action` varchar(64) NOT NULL,
+  `actor_label` varchar(255) DEFAULT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX (`payroll_run_id`),
+  INDEX (`shop_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -6,6 +6,7 @@ import {
   finalizePayroll,
   getEmployeePayrollHistory,
   getPayrollSummary,
+  markPayrollPaid,
   savePayrollDraft,
 } from "../controllers/payrollController.js"
 
@@ -17,6 +18,7 @@ router.get("/employees/:employeeId/history", getEmployeePayrollHistory)
 router.get("/employees/:employeeId/download-pdf", downloadEmployeePayrollPdf)
 router.post("/save", savePayrollDraft)
 router.post("/finalize", finalizePayroll)
+router.post("/pay", markPayrollPaid)
 router.get("/download-pdf", downloadPayrollPdf)
 
 export default router

@@ -73,6 +73,34 @@ function buildDraftRows(rows) {
   return drafts
 }
 
+function TrendChart({ data }) {
+  const maxValue = Math.max(...data.map((item) => Number(item.final_pay || 0)), 0)
+
+  return (
+    <div className="rounded-[20px] border bg-white p-4">
+      <div className="text-sm font-semibold text-slate-800">Yearly Payroll Trend</div>
+      {data.length === 0 ? (
+        <div className="mt-4 text-sm text-slate-400">No saved payroll history yet for this year.</div>
+      ) : (
+        <div className="mt-4 flex h-56 items-end gap-3 overflow-x-auto">
+          {data.map((item) => {
+            const height = maxValue > 0 ? Math.max((Number(item.final_pay || 0) / maxValue) * 100, 8) : 8
+            return (
+              <div key={item.month_key} className="flex min-w-[72px] flex-col items-center gap-2">
+                <div className="text-[11px] font-semibold text-slate-500">{formatCurrency(item.final_pay)}</div>
+                <div className="flex h-40 items-end">
+                  <div className="w-10 rounded-t-2xl bg-cyan-500" style={{ height: `${height}%` }} />
+                </div>
+                <div className="text-[11px] text-slate-400">{item.month_key}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Payroll() {
   const navigate = useNavigate()
   const [periodType, setPeriodType] = useState("weekly")
@@ -107,7 +135,13 @@ export default function Payroll() {
 
   const allRows = payrollData?.rows || []
   const payrollRun = payrollData?.payroll_run || null
-  const isFinalized = payrollRun?.status === "finalized"
+  const isWeeklyMode = periodType === "weekly"
+  const isFinalized = payrollRun?.status === "finalized" || payrollRun?.status === "paid"
+  const canMarkPaid = isWeeklyMode && payrollRun?.status === "finalized"
+  const departmentBreakdown = payrollData?.analytics?.department_breakdown || []
+  const yearlyTrend = payrollData?.analytics?.yearly_trend || []
+  const trendYear = payrollData?.analytics?.trend_year || new Date().getFullYear()
+  const auditLogs = payrollData?.audit_logs || []
 
   const filteredEmployees = useMemo(() => {
     const query = employeeSearch.trim().toLowerCase()
@@ -244,6 +278,27 @@ export default function Payroll() {
     }
   }
 
+  const markPayrollPaid = async () => {
+    if (!window.confirm("Mark this payroll period as paid?")) {
+      return
+    }
+
+    try {
+      setSaving(true)
+      const res = await payrollApi.markPaid({
+        periodType,
+        startDate: periodStart,
+      })
+      setPayrollData(res.data)
+      setDraftRows(buildDraftRows(res.data.rows))
+    } catch (error) {
+      console.error(error)
+      alert(error?.response?.data?.message || "Failed to mark payroll as paid")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const downloadPdf = async () => {
     try {
       const res = await payrollApi.downloadPdf({
@@ -341,7 +396,7 @@ export default function Payroll() {
 
           <button
             onClick={saveDraft}
-            disabled={saving || isFinalized || loading}
+            disabled={saving || isFinalized || loading || !isWeeklyMode}
             className="rounded-xl border border-cyan-600 px-4 py-2 text-sm font-semibold text-cyan-700 disabled:opacity-50"
           >
             {saving && !isFinalized ? "Saving..." : "Save Draft"}
@@ -349,10 +404,18 @@ export default function Payroll() {
 
           <button
             onClick={finalizePayroll}
-            disabled={saving || isFinalized || loading}
+            disabled={saving || isFinalized || loading || !isWeeklyMode}
             className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {isFinalized ? "Finalized" : saving ? "Finalizing..." : "Finalize Payroll"}
+          </button>
+
+          <button
+            onClick={markPayrollPaid}
+            disabled={saving || !canMarkPaid || loading}
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {payrollRun?.status === "paid" ? "Paid" : saving && canMarkPaid ? "Marking..." : "Mark as Paid"}
           </button>
         </div>
 
@@ -434,6 +497,12 @@ export default function Payroll() {
         <span>Status: {payrollRun?.status || "draft preview"}</span>
       </div>
 
+      {!isWeeklyMode ? (
+        <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Biweekly and monthly payroll are view-only analysis modes. Weekly payroll is the only period that can be edited, finalized, and marked as paid.
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-[24px] border bg-white">
         <div className="flex min-w-[760px] items-stretch">
           {[
@@ -456,6 +525,84 @@ export default function Payroll() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-[20px] border bg-white p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-lg font-bold">Analytics</div>
+            <div className="text-xs text-slate-500">Department payroll and yearly trend for the selected payroll type.</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <TrendChart data={yearlyTrend} />
+
+          <div className="rounded-[20px] border bg-white p-4">
+            <div className="text-sm font-semibold text-slate-800">Department Breakdown</div>
+            <div className="mt-4 space-y-3">
+              {departmentBreakdown.length === 0 ? (
+                <div className="text-sm text-slate-400">No department payroll data for this period.</div>
+              ) : (
+                departmentBreakdown.map((item) => (
+                  <div key={item.department_name} className="rounded-2xl border border-slate-200 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-slate-900">{item.department_name}</div>
+                        <div className="text-xs text-slate-500">
+                          {item.employees} employees • {formatHours(item.worked_hours)}
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-cyan-700">{formatCurrency(item.final_pay)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[20px] border bg-white p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-lg font-bold">Recent Payroll Activity</div>
+            <div className="text-xs text-slate-500">
+              Audit trail for this payroll run.
+            </div>
+          </div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            {trendYear}
+          </div>
+        </div>
+
+        {auditLogs.length === 0 ? (
+          <div className="text-sm text-slate-400">No payroll activity recorded for this run yet.</div>
+        ) : (
+          <div className="space-y-3">
+            {auditLogs.map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="font-semibold text-slate-900">
+                      {log.action === "saved_draft"
+                        ? "Saved draft"
+                        : log.action === "finalized"
+                          ? "Finalized payroll"
+                          : log.action === "marked_paid"
+                            ? "Marked payroll as paid"
+                            : log.action}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      By {log.actor_label || "Shop User"}
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-400">{new Date(log.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rounded-[20px] border bg-white p-4">
@@ -503,7 +650,7 @@ export default function Payroll() {
                         type="number"
                         step="0.01"
                         value={row.bonus_amount}
-                        disabled={isFinalized}
+                        disabled={isFinalized || !isWeeklyMode}
                         onChange={(e) => setDraftField(row.employee_id, "bonus_amount", e.target.value)}
                         className="w-28 rounded-lg border px-3 py-2 disabled:bg-slate-50"
                       />
@@ -513,7 +660,7 @@ export default function Payroll() {
                         type="number"
                         step="0.01"
                         value={row.penalty_amount}
-                        disabled={isFinalized}
+                        disabled={isFinalized || !isWeeklyMode}
                         onChange={(e) => setDraftField(row.employee_id, "penalty_amount", e.target.value)}
                         className="w-28 rounded-lg border px-3 py-2 disabled:bg-slate-50"
                       />
@@ -523,7 +670,7 @@ export default function Payroll() {
                         type="number"
                         step="0.01"
                         value={row.manual_adjustment}
-                        disabled={isFinalized}
+                        disabled={isFinalized || !isWeeklyMode}
                         onChange={(e) => setDraftField(row.employee_id, "manual_adjustment", e.target.value)}
                         className="w-28 rounded-lg border px-3 py-2 disabled:bg-slate-50"
                       />
@@ -531,7 +678,7 @@ export default function Payroll() {
                     <td className="px-4 py-4">
                       <textarea
                         value={row.notes}
-                        disabled={isFinalized}
+                        disabled={isFinalized || !isWeeklyMode}
                         onChange={(e) => setDraftField(row.employee_id, "notes", e.target.value)}
                         className="min-h-[78px] w-52 rounded-lg border px-3 py-2 disabled:bg-slate-50"
                         placeholder="Reason or note"

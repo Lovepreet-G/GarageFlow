@@ -5,6 +5,7 @@ const payrollApi = {
   getEmployeeHistory: (employeeId, params) => api.get(`/payroll/employees/${employeeId}/history`, { params }),
   saveDraft: (payload) => api.post("/payroll/save", payload),
   finalize: (payload) => api.post("/payroll/finalize", payload),
+  markPaid: (payload) => api.post("/payroll/pay", payload),
   downloadPdf: (params) =>
     api.get("/payroll/download-pdf", {
       params,

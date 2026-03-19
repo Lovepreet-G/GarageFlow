@@ -266,9 +266,11 @@ export default function PayrollEmployeeHistory() {
                           <span
                             className={[
                               "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
-                              row.status === "finalized"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700",
+                              row.status === "paid"
+                                ? "bg-cyan-50 text-cyan-700"
+                                : row.status === "finalized"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-amber-50 text-amber-700",
                             ].join(" ")}
                           >
                             {row.status}
