@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import payrollApi from "../api/payrollApi"
 
 function parseLocalDate(iso) {
@@ -28,7 +40,6 @@ function getNormalizedStartDate(periodType, value) {
     const date = parseLocalDate(value)
     return formatLocalDate(new Date(date.getFullYear(), date.getMonth(), 1))
   }
-
   return formatLocalDate(getMonday(value))
 }
 
@@ -47,6 +58,7 @@ function formatCurrency(value) {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: "CAD",
+    maximumFractionDigits: 2,
   }).format(Number(value || 0))
 }
 
@@ -59,78 +71,51 @@ function periodLabel(startDate, endDate) {
   return `${parseLocalDate(startDate).toLocaleDateString()} - ${parseLocalDate(endDate).toLocaleDateString()}`
 }
 
-function TinyBarChart({ title, data, valueKey, colorClass }) {
-  const maxValue = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 0)
-
+function ChartCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-[20px] border bg-white p-4">
-      <div className="text-sm font-semibold text-slate-800">{title}</div>
-      <div className="mt-4 flex h-56 items-end gap-3 overflow-x-auto">
-        {data.length === 0 ? (
-          <div className="text-sm text-slate-400">No weekly payroll history yet.</div>
-        ) : (
-          data.map((item) => {
-            const value = Number(item[valueKey] || 0)
-            const height = maxValue > 0 ? Math.max((value / maxValue) * 100, 8) : 8
+    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-base font-bold text-slate-900">{title}</div>
+      {subtitle ? <div className="mt-1 text-xs text-slate-500">{subtitle}</div> : null}
+      <div className="mt-4 h-72">{children}</div>
+    </div>
+  )
+}
 
-            return (
-              <div key={`${title}_${item.start_date}`} className="flex min-w-[64px] flex-col items-center gap-2">
-                <div className="text-[11px] font-semibold text-slate-500">
-                  {valueKey.includes("pay") ? formatCurrency(value) : formatHours(value)}
-                </div>
-                <div className="flex h-40 items-end">
-                  <div
-                    className={`w-10 rounded-t-2xl ${colorClass}`}
-                    style={{ height: `${height}%` }}
-                    title={`${item.start_date} to ${item.end_date}`}
-                  />
-                </div>
-                <div className="text-center text-[11px] text-slate-400">{item.start_date}</div>
-              </div>
-            )
-          })
-        )}
+function StatStrip({ items }) {
+  return (
+    <div className="overflow-x-auto rounded-[26px] border border-slate-200 bg-white shadow-sm">
+      <div className="flex min-w-[860px]">
+        {items.map((item, index) => (
+          <div
+            key={item.label}
+            className={[
+              "flex-1 px-5 py-5",
+              index !== items.length - 1 ? "border-r border-slate-200" : "",
+            ].join(" ")}
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {item.label}
+            </div>
+            <div className={`mt-2 text-2xl font-extrabold ${item.tone || "text-slate-900"}`}>{item.value}</div>
+            {item.subtext ? <div className="mt-1 text-xs text-slate-500">{item.subtext}</div> : null}
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-function TinyLineChart({ title, data, valueKey }) {
-  const chartData = data.slice(-8)
-  const maxValue = Math.max(...chartData.map((item) => Number(item[valueKey] || 0)), 0)
-  const points = chartData.map((item, index) => {
-    const x = chartData.length === 1 ? 50 : (index / (chartData.length - 1)) * 100
-    const y = maxValue > 0 ? 100 - (Number(item[valueKey] || 0) / maxValue) * 90 : 100
-    return `${x},${y}`
-  })
+function CurrencyTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
 
   return (
-    <div className="rounded-[20px] border bg-white p-4">
-      <div className="text-sm font-semibold text-slate-800">{title}</div>
-      {chartData.length === 0 ? (
-        <div className="mt-4 text-sm text-slate-400">No weekly payroll history yet.</div>
-      ) : (
-        <>
-          <div className="mt-4 h-56 rounded-2xl bg-slate-50 p-3">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
-              <polyline fill="none" stroke="#0f172a" strokeWidth="2.5" points={points.join(" ")} />
-              {chartData.map((item, index) => {
-                const x = chartData.length === 1 ? 50 : (index / (chartData.length - 1)) * 100
-                const y = maxValue > 0 ? 100 - (Number(item[valueKey] || 0) / maxValue) * 90 : 100
-                return <circle key={`${item.start_date}_${index}`} cx={x} cy={y} r="2.8" fill="#06b6d4" />
-              })}
-            </svg>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-500">
-            {chartData.map((item) => (
-              <div key={`${title}_${item.start_date}`}>
-                {item.start_date}: {valueKey.includes("pay") ? formatCurrency(item[valueKey]) : formatHours(item[valueKey])}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg">
+      <div className="font-semibold text-slate-800">{label}</div>
+      {payload.map((entry) => (
+        <div key={entry.dataKey} className="mt-1 text-slate-600">
+          {entry.name}: {entry.dataKey.includes("hours") ? formatHours(entry.value) : formatCurrency(entry.value)}
+        </div>
+      ))}
     </div>
   )
 }
@@ -172,16 +157,6 @@ export default function PayrollEmployeeHistory() {
   const previewRun = previewData?.payroll_run || null
   const weeklyHistory = historyData?.history || []
   const weeklyChartPoints = historyData?.analytics?.chart_points || []
-  const weeklySummary = historyData?.analytics?.summary || {
-    periods: 0,
-    worked_hours: 0,
-    gross_pay: 0,
-    bonus_amount: 0,
-    penalty_amount: 0,
-    manual_adjustment: 0,
-    final_pay: 0,
-  }
-
   const latestWeeklyPeriod = useMemo(() => weeklyHistory[0] || null, [weeklyHistory])
 
   const goPrevPeriod = () => {
@@ -237,159 +212,156 @@ export default function PayrollEmployeeHistory() {
     }
   }
 
+  const chartData = weeklyChartPoints.map((item) => ({
+    period: item.start_date,
+    final_pay: Number(item.final_pay || 0),
+    gross_pay: Number(item.gross_pay || 0),
+    worked_hours: Number(item.worked_hours || 0),
+  }))
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <button onClick={() => navigate("/payroll")} className="text-sm text-slate-500 hover:underline">
-            Back to Payroll
-          </button>
-          <div className="mt-2 text-2xl font-extrabold">
-            {employee?.employee_name || historyData?.employee?.employee_name || "Employee Payroll History"}
-          </div>
-          <div className="text-xs text-slate-400">
-            Navigate weekly, biweekly, or monthly employee payroll preview while keeping weekly finalized history below.
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {["weekly", "biweekly", "monthly"].map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handlePeriodTypeChange(type)}
-              className={[
-                "rounded-xl border px-4 py-2 text-sm font-semibold",
-                periodType === type ? "border-slate-900 bg-slate-900 text-white" : "bg-white",
-              ].join(" ")}
-            >
-              {type === "biweekly" ? "Biweekly" : type.charAt(0).toUpperCase() + type.slice(1)}
+      <section className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-2">
+            <button onClick={() => navigate("/payroll")} className="text-sm text-slate-500 hover:underline">
+              Back to Payroll
             </button>
-          ))}
+            <div className="text-3xl font-black tracking-tight text-slate-900">
+              {employee?.employee_name || historyData?.employee?.employee_name || "Employee Payroll"}
+            </div>
+            <div className="max-w-2xl text-sm text-slate-500">
+              Review this employee’s current payroll preview by period and keep weekly saved payroll history available below.
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <span>{previewData?.period ? periodLabel(previewData.period.start_date, previewData.period.end_date) : ""}</span>
+              <span>{periodType}</span>
+              <span>Status: {previewRun?.status || "preview"}</span>
+            </div>
+          </div>
 
-          <button onClick={downloadCurrentPdf} className="rounded-xl border px-3 py-2">
-            Download Current PDF
+          <div className="flex flex-wrap items-center gap-2">
+            {["weekly", "biweekly", "monthly"].map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handlePeriodTypeChange(type)}
+                className={[
+                  "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                  periodType === type
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100",
+                ].join(" ")}
+              >
+                {type === "biweekly" ? "Biweekly" : type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+
+            <button onClick={downloadCurrentPdf} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+              Download Current PDF
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button onClick={goPrevPeriod} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+            Prev {periodType === "monthly" ? "Month" : periodType === "biweekly" ? "2 Weeks" : "Week"}
+          </button>
+          <input
+            type="date"
+            value={periodStart}
+            onChange={(e) => handlePeriodStart(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+          />
+          <button onClick={goNextPeriod} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+            Next {periodType === "monthly" ? "Month" : periodType === "biweekly" ? "2 Weeks" : "Week"}
           </button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <button onClick={goPrevPeriod} className="rounded-xl border px-3 py-2">
-          Prev {periodType === "monthly" ? "Month" : periodType === "biweekly" ? "2 Weeks" : "Week"}
-        </button>
-
-        <input
-          type="date"
-          value={periodStart}
-          onChange={(e) => handlePeriodStart(e.target.value)}
-          className="rounded border p-2"
-        />
-
-        <button onClick={goNextPeriod} className="rounded-xl border px-3 py-2">
-          Next {periodType === "monthly" ? "Month" : periodType === "biweekly" ? "2 Weeks" : "Week"}
-        </button>
-      </div>
+      </section>
 
       {loading ? (
-        <div className="rounded-[20px] border bg-white p-6 text-slate-400">Loading...</div>
+        <div className="rounded-[24px] border border-slate-200 bg-white p-6 text-slate-400 shadow-sm">Loading...</div>
       ) : !employee ? (
-        <div className="rounded-[20px] border bg-white p-6 text-slate-400">No payroll history found.</div>
+        <div className="rounded-[24px] border border-slate-200 bg-white p-6 text-slate-400 shadow-sm">No payroll history found.</div>
       ) : (
         <>
-          <div className="rounded-[20px] border bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-lg font-bold">Current Period Preview</div>
-                <div className="text-xs text-slate-500">
-                  {previewData?.period ? periodLabel(previewData.period.start_date, previewData.period.end_date) : ""}
-                </div>
-              </div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                {periodType}
-              </div>
-            </div>
+          <StatStrip
+            items={[
+              { label: "Worked Days", value: previewRow?.worked_days ?? "-" },
+              { label: "Worked Hours", value: previewRow ? formatHours(previewRow.worked_hours) : "-" },
+              { label: "Gross Pay", value: previewRow ? formatCurrency(previewRow.gross_pay) : "-" },
+              { label: "Final Pay", value: previewRow ? formatCurrency(previewRow.final_pay) : "-", tone: "text-cyan-700" },
+              { label: "Status", value: previewRun?.status || "preview" },
+            ]}
+          />
 
-            {previewRow ? (
-              <div className="overflow-x-auto rounded-[24px] border bg-white">
-                <div className="flex min-w-[960px] items-stretch">
-                  {[
-                    { label: "Worked Days", value: previewRow.worked_days },
-                    { label: "Worked Hours", value: formatHours(previewRow.worked_hours) },
-                    { label: "Gross Pay", value: formatCurrency(previewRow.gross_pay) },
-                    { label: "Final Pay", value: formatCurrency(previewRow.final_pay), tone: "text-cyan-700" },
-                    { label: "Status", value: previewRun?.status || "preview" },
-                  ].map((item, index) => (
-                    <div
-                      key={item.label}
-                      className={[
-                        "flex-1 px-5 py-4",
-                        index !== 4 ? "border-r border-slate-200" : "",
-                      ].join(" ")}
-                    >
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {item.label}
-                      </div>
-                      <div className={`mt-2 text-2xl font-extrabold ${item.tone || "text-slate-900"}`}>{item.value}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-slate-400">No payroll preview data for this selected period.</div>
-            )}
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <ChartCard title="Weekly Final Pay Trend" subtitle="Saved weekly payroll only.">
+              {chartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">No weekly payroll history yet.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="period" tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <Tooltip content={<CurrencyTooltip />} />
+                    <Bar dataKey="final_pay" name="Final Pay" fill="#06b6d4" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Weekly Hours Trend" subtitle="Worked hours from saved weekly payroll.">
+              {chartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">No weekly payroll history yet.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="period" tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <Tooltip content={<CurrencyTooltip />} />
+                    <Bar dataKey="worked_hours" name="Worked Hours" fill="#0f172a" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+
+            <ChartCard title="Weekly Gross vs Final" subtitle="Trend line from saved weekly payroll.">
+              {chartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">No weekly payroll history yet.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="period" tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
+                    <Tooltip content={<CurrencyTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="gross_pay" name="Gross Pay" stroke="#0f172a" strokeWidth={2.5} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="final_pay" name="Final Pay" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
           </div>
 
-          <div className="rounded-[20px] border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">
-            Weekly payroll history, charts, and history table stay weekly because weekly is the only finalized payroll source. The top preview section above changes with your selected weekly, biweekly, or monthly period.
-          </div>
-
-          <div className="overflow-x-auto rounded-[24px] border bg-white">
-            <div className="flex min-w-[960px] items-stretch">
-              {[
-                { label: "Saved Weekly Periods", value: weeklySummary.periods },
-                { label: "Worked Hours", value: formatHours(weeklySummary.worked_hours) },
-                { label: "Gross Pay", value: formatCurrency(weeklySummary.gross_pay) },
-                { label: "Final Pay", value: formatCurrency(weeklySummary.final_pay), tone: "text-cyan-700" },
-                { label: "Bonuses", value: formatCurrency(weeklySummary.bonus_amount) },
-                { label: "Penalties", value: formatCurrency(weeklySummary.penalty_amount) },
-              ].map((item, index) => (
-                <div
-                  key={item.label}
-                  className={[
-                    "flex-1 px-5 py-4",
-                    index !== 5 ? "border-r border-slate-200" : "",
-                  ].join(" ")}
-                >
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {item.label}
-                  </div>
-                  <div className={`mt-2 text-2xl font-extrabold ${item.tone || "text-slate-900"}`}>{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <TinyBarChart title="Weekly Final Pay Trend" data={weeklyChartPoints} valueKey="final_pay" colorClass="bg-cyan-500" />
-            <TinyBarChart title="Weekly Hours Trend" data={weeklyChartPoints} valueKey="worked_hours" colorClass="bg-slate-900" />
-            <TinyLineChart title="Weekly Gross Pay Trend" data={weeklyChartPoints} valueKey="gross_pay" />
-          </div>
-
-          <div className="rounded-[20px] border bg-white p-4">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <div className="text-lg font-bold">Weekly Payroll History</div>
-                <div className="text-xs text-slate-500">Saved finalized or paid weekly payroll runs for this employee.</div>
+                <div className="text-base font-bold text-slate-900">Weekly Payroll History</div>
+                <div className="mt-1 text-xs text-slate-500">Saved finalized or paid weekly payroll runs for this employee.</div>
               </div>
               {latestWeeklyPeriod ? (
-                <button onClick={() => downloadWeeklyPdf(latestWeeklyPeriod.start_date)} className="rounded-xl border px-3 py-2 text-sm font-semibold">
+                <button onClick={() => downloadWeeklyPdf(latestWeeklyPeriod.start_date)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
                   Download Latest Weekly PDF
                 </button>
               ) : null}
             </div>
 
             {weeklyHistory.length === 0 ? (
-              <div className="p-4 text-slate-400">No saved weekly payroll history yet.</div>
+              <div className="text-sm text-slate-400">No saved weekly payroll history yet.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
@@ -408,10 +380,10 @@ export default function PayrollEmployeeHistory() {
                   </thead>
                   <tbody>
                     {weeklyHistory.map((row) => (
-                      <tr key={row.payroll_run_id} className="border-b last:border-b-0">
+                      <tr key={row.payroll_run_id} className="border-b align-top last:border-b-0">
                         <td className="px-4 py-4">
                           <div className="font-semibold text-slate-900">{row.start_date} to {row.end_date}</div>
-                          <div className="text-xs text-slate-500">{row.notes || "No notes"}</div>
+                          <div className="mt-1 text-xs text-slate-500">{row.notes || "No notes"}</div>
                         </td>
                         <td className="px-4 py-4">
                           <span
@@ -437,7 +409,7 @@ export default function PayrollEmployeeHistory() {
                           <button
                             type="button"
                             onClick={() => downloadWeeklyPdf(row.start_date)}
-                            className="rounded-xl border px-3 py-2 text-xs font-semibold"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                           >
                             PDF
                           </button>
@@ -448,7 +420,7 @@ export default function PayrollEmployeeHistory() {
                 </table>
               </div>
             )}
-          </div>
+          </section>
         </>
       )}
     </div>
