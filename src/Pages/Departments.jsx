@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import departmentsApi from "../api/departmentsApi"
-import ConfirmModal from "../components/ConfirmModal"
+import ConfirmModal from "../Components/ConfirmModal"
 
 export default function Departments() {
   const [rows, setRows] = useState([])

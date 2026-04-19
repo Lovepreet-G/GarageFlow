@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../api"
-import ConfirmModal from "../components/ConfirmModal"
+import ConfirmModal from "../Components/ConfirmModal"
 import departmentsApi from "../api/departmentsApi"
 
 export default function Employees() {

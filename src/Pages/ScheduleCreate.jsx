@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import scheduleApi from "../api/scheduleApi"
 import employeesApi from "../api/employeesApi"
-import ScheduleGrid from "../components/ScheduleGrid"
-import ScheduleShiftModal from "../components/ScheduleShiftModal"
+import ScheduleGrid from "../Components/ScheduleGrid"
+import ScheduleShiftModal from "../Components/ScheduleShiftModal"
 
 function parseLocalDate(iso) {
   const [y, m, d] = String(iso).split("-").map(Number)

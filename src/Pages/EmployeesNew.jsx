@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"
-import EmployeeForm from "../components/EmployeeForm"
+import EmployeeForm from "../Components/EmployeeForm"
 
 export default function EmployeesNew() {
   const navigate = useNavigate()

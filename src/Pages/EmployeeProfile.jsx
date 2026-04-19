@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import api from "../api"
 import departmentsApi from "../api/departmentsApi"
-import EmployeeForm from "../components/EmployeeForm"
-import ConfirmModal from "../components/ConfirmModal"
+import EmployeeForm from "../Components/EmployeeForm"
+import ConfirmModal from "../Components/ConfirmModal"
 
 export default function EmployeeProfile() {
   const { id } = useParams()
