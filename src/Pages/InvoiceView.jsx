@@ -309,12 +309,12 @@ function InvoiceView() {
               </div>
 
               <div className="text-slate-500 tracking-widest text-xs font-semibold">
-                HST (7%)
+                GST (5%)
               </div>
               <div className="text-right font-semibold">{money(invoice.hst_amount)}</div>
 
               <div className="text-slate-500 tracking-widest text-xs font-semibold">
-                PST (5%)
+                PST (7%)
               </div>
               <div className="text-right font-semibold">{money(invoice.pst_amount)}</div>
 

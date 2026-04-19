@@ -5,9 +5,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -146,6 +143,7 @@ export default function Payroll() {
   const [draftRows, setDraftRows] = useState({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -172,9 +170,6 @@ export default function Payroll() {
   const isLocked = payrollRun?.status === "finalized" || payrollRun?.status === "paid"
   const canMarkPaid = isWeeklyMode && payrollRun?.status === "finalized"
   const departmentBreakdown = payrollData?.analytics?.department_breakdown || []
-  const yearlyTrend = payrollData?.analytics?.yearly_trend || []
-  const trendYear = payrollData?.analytics?.trend_year || new Date().getFullYear()
-  const trendSourcePeriod = payrollData?.analytics?.trend_source_period || "weekly"
   const auditLogs = payrollData?.audit_logs || []
 
   const filteredEmployees = useMemo(() => {
@@ -334,6 +329,7 @@ export default function Payroll() {
 
   const downloadPdf = async () => {
     try {
+      setDownloading(true)
       const res = await payrollApi.downloadPdf({
         periodType,
         startDate: periodStart,
@@ -349,6 +345,8 @@ export default function Payroll() {
     } catch (error) {
       console.error(error)
       alert(error?.response?.data?.message || "Failed to download payroll PDF")
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -378,12 +376,6 @@ export default function Payroll() {
     setEmployeeDropdownOpen(false)
     setEmployeeSearch("")
   }
-
-  const trendChartData = yearlyTrend.map((item) => ({
-    month: item.month_key,
-    final_pay: Number(item.final_pay || 0),
-    worked_hours: Number(item.worked_hours || 0),
-  }))
 
   return (
     <div className="space-y-6">
@@ -439,8 +431,12 @@ export default function Payroll() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={downloadPdf} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
-              Download PDF
+            <button
+              onClick={downloadPdf}
+              disabled={downloading}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {downloading ? "Downloading..." : "Download PDF"}
             </button>
             <button
               onClick={saveDraft}
@@ -542,27 +538,7 @@ export default function Payroll() {
         ]}
       />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <ChartCard title="Yearly Payroll Trend" subtitle={`Based on saved ${trendSourcePeriod} payroll runs in ${trendYear}.`}>
-          {trendChartData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              No saved payroll history yet for this year.
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendChartData} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#64748b" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#64748b" }} />
-                <Tooltip content={<CurrencyTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="final_pay" name="Final Pay" stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="worked_hours" name="Worked Hours" stroke="#0f172a" strokeWidth={2.5} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
         <ChartCard title="Department Payroll" subtitle="Final payroll cost by department for the selected period.">
           {departmentBreakdown.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -584,38 +560,37 @@ export default function Payroll() {
             </ResponsiveContainer>
           )}
         </ChartCard>
-      </div>
+        <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-base font-bold text-slate-900">Recent Payroll Activity</div>
+          <div className="mt-1 text-xs text-slate-500">Audit trail for the currently selected payroll run.</div>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-base font-bold text-slate-900">Recent Payroll Activity</div>
-        <div className="mt-1 text-xs text-slate-500">Audit trail for the currently selected payroll run.</div>
-
-        {auditLogs.length === 0 ? (
-          <div className="mt-4 text-sm text-slate-400">No payroll activity recorded for this run yet.</div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {auditLogs.map((log) => (
-              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-slate-900">
-                      {log.action === "saved_draft"
-                        ? "Saved draft"
-                        : log.action === "finalized"
-                          ? "Finalized payroll"
-                          : log.action === "marked_paid"
-                            ? "Marked payroll as paid"
-                            : log.action}
+          {auditLogs.length === 0 ? (
+            <div className="mt-4 text-sm text-slate-400">No payroll activity recorded for this run yet.</div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900">
+                        {log.action === "saved_draft"
+                          ? "Saved draft"
+                          : log.action === "finalized"
+                            ? "Finalized payroll"
+                            : log.action === "marked_paid"
+                              ? "Marked payroll as paid"
+                              : log.action}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">By {log.actor_label || "Shop User"}</div>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">By {log.actor_label || "Shop User"}</div>
+                    <div className="text-[11px] text-slate-400">{new Date(log.created_at).toLocaleString()}</div>
                   </div>
-                  <div className="text-[11px] text-slate-400">{new Date(log.created_at).toLocaleString()}</div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
 
       <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="text-base font-bold text-slate-900">Payroll Lines</div>

@@ -42,6 +42,7 @@ export default function ScheduleView() {
   const [employees, setEmployees] = useState([])
   const [schedulesMap, setSchedulesMap] = useState({})
   const [loading, setLoading] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   const week = useMemo(() => {
     const start = parseLocalDate(weekStart)
@@ -102,6 +103,7 @@ export default function ScheduleView() {
 
   const downloadPdf = async () => {
     try {
+      setDownloading(true)
       const res = await scheduleApi.downloadSchedulePdf(weekStart)
       const blob = new Blob([res.data], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
@@ -113,6 +115,8 @@ export default function ScheduleView() {
     } catch (e) {
       console.error(e)
       alert(e?.response?.data?.message || "Failed to download PDF")
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -142,8 +146,12 @@ export default function ScheduleView() {
             Next Week
           </button>
 
-          <button onClick={downloadPdf} className="px-3 py-2 rounded-xl border">
-            Download PDF
+          <button
+            onClick={downloadPdf}
+            disabled={downloading}
+            className="px-3 py-2 rounded-xl border disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {downloading ? "Downloading..." : "Download PDF"}
           </button>
         </div>
       </div>

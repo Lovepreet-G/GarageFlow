@@ -142,9 +142,14 @@ function Sidebar({ open, onClose }) {
           </div>
 
           <div className="border-t border-slate-100 pt-2">
-            <NavLink to="/payroll" className={linkClass} onClick={handleNavClick}>
-              <span className={payrollActive ? "text-white" : ""}>PAYROLL</span>
-            </NavLink>
+            <div className="space-y-1">
+              <NavLink to="/payroll/dashboard"  className={linkClass} onClick={handleNavClick}>
+                <span>PAYROLL DASHBOARD</span>
+              </NavLink>
+              <NavLink to="/payroll" end className={linkClass} onClick={handleNavClick}>
+                <span>PAYROLL</span>
+              </NavLink>
+            </div>
           </div>
         </nav>
 

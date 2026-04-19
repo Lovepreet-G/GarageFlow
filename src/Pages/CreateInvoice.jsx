@@ -69,7 +69,7 @@ function CreateInvoice() {
   const [items, setItems] = useState([emptyItem()])
 
   // ====== Taxes & Note ======
-  const [includeHST, setIncludeHST] = useState(true) // ✅ NEW
+  const [includeHST, setIncludeHST] = useState(true)
   const [includePST, setIncludePST] = useState(true)
   const [note, setNote] = useState("")
 
@@ -163,14 +163,14 @@ function CreateInvoice() {
     return Number(sum.toFixed(2))
   }, [items])
 
-  // ✅ UPDATED: HST toggle
+  // GST is stored in the existing hst_amount field to avoid breaking invoice data.
   const hst = useMemo(
-    () => (includeHST ? Number((subtotal * 0.07).toFixed(2)) : 0),
+    () => (includeHST ? Number((subtotal * 0.05).toFixed(2)) : 0),
     [subtotal, includeHST]
   )
 
   const pst = useMemo(
-    () => (includePST ? Number((subtotal * 0.05).toFixed(2)) : 0),
+    () => (includePST ? Number((subtotal * 0.07).toFixed(2)) : 0),
     [subtotal, includePST]
   )
 
@@ -246,10 +246,11 @@ function CreateInvoice() {
     }
 
     if (vehicleMode === "existing") {
-      if (!vehicle_id) next.vehicle_id = "Select a vehicle (or add a new one)."
-    } else {
-      if (!newVehicle.vehicle_vin.trim()) next.newVehicle.vehicle_vin = "VIN is required."
-      else if (newVehicle.vehicle_vin.trim().length < 5) next.newVehicle.vehicle_vin = "VIN looks too short."
+    if (!vehicle_id) next.vehicle_id = "Select a vehicle (or add a new one)."
+  } else {
+      if (newVehicle.vehicle_vin.trim() && newVehicle.vehicle_vin.trim().length < 5) {
+        next.newVehicle.vehicle_vin = "VIN looks too short."
+      }
 
       if (newVehicle.year.trim()) {
         const y = Number(newVehicle.year)
@@ -309,7 +310,7 @@ function CreateInvoice() {
       if (vehicleMode === "new") {
         const vRes = await api.post("/vehicles", {
           customer_id: Number(finalCustomerId),
-          vehicle_vin: newVehicle.vehicle_vin.trim(),
+          vehicle_vin: newVehicle.vehicle_vin.trim() || null,
           make: newVehicle.make.trim() || null,
           model: newVehicle.model.trim() || null,
           year: newVehicle.year.trim() ? Number(newVehicle.year) : null,
@@ -339,7 +340,7 @@ function CreateInvoice() {
         due_date: due_date || null,
         odometer_reading: odometer_reading ? Number(odometer_reading) : null,
         subtotal_amount: Number(subtotal.toFixed(2)),
-        hst_amount: Number(hst.toFixed(2)), // ✅ now 0 if toggled off
+        hst_amount: Number(hst.toFixed(2)),
         pst_amount: Number(pst.toFixed(2)),
         tax_amount: Number(tax.toFixed(2)),
         total_amount: Number(total.toFixed(2)),
@@ -753,7 +754,7 @@ function CreateInvoice() {
                       "w-full h-12 rounded-2xl px-4 bg-slate-50 border",
                       errors.newVehicle.vehicle_vin ? "border-red-500" : "border-slate-100",
                     ].join(" ")}
-                    placeholder="VIN *"
+                    placeholder="VIN (optional)"
                     value={newVehicle.vehicle_vin}
                     onChange={(e) => {
                       setNewVehicle((p) => ({ ...p, vehicle_vin: e.target.value }))
@@ -983,7 +984,6 @@ function CreateInvoice() {
               <span>${money(subtotal)}</span>
             </div>
 
-            {/* ✅ NEW: HST toggle */}
             <div className="flex justify-between items-center text-white/70">
               <label className="flex items-center gap-2">
                 <input
@@ -992,7 +992,7 @@ function CreateInvoice() {
                   onChange={(e) => setIncludeHST(e.target.checked)}
                   className="h-4 w-4 accent-cyan-400"
                 />
-                HST (7%)
+                GST (5%)
               </label>
               <span>${money(hst)}</span>
             </div>
@@ -1005,7 +1005,7 @@ function CreateInvoice() {
                   onChange={(e) => setIncludePST(e.target.checked)}
                   className="h-4 w-4 accent-cyan-400"
                 />
-                PST (5%)
+                PST (7%)
               </label>
               <span>${money(pst)}</span>
             </div>

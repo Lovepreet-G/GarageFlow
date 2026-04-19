@@ -179,8 +179,9 @@ function Customers() {
     const e = { vehicle_vin: "", year: "", general: "" }
 
     if (!selectedId) e.general = "Select a customer first."
-    if (!newVehicle.vehicle_vin.trim()) e.vehicle_vin = "VIN is required."
-    else if (newVehicle.vehicle_vin.trim().length < 5) e.vehicle_vin = "VIN looks too short."
+    if (newVehicle.vehicle_vin.trim() && newVehicle.vehicle_vin.trim().length < 5) {
+      e.vehicle_vin = "VIN looks too short."
+    }
 
     if (newVehicle.year.trim()) {
       const y = Number(newVehicle.year)
@@ -235,7 +236,7 @@ function Customers() {
     try {
       await api.post("/vehicles", {
         customer_id: Number(selectedId),
-        vehicle_vin: newVehicle.vehicle_vin.trim(),
+        vehicle_vin: newVehicle.vehicle_vin.trim() || null,
         make: newVehicle.make.trim() || null,
         model: newVehicle.model.trim() || null,
         year: newVehicle.year.trim() ? Number(newVehicle.year) : null,
@@ -685,7 +686,7 @@ function Customers() {
                         "border rounded-xl px-3 py-2.5 w-full bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/20",
                         vehicleErrors.vehicle_vin ? "border-red-500" : "border-slate-300",
                       ].join(" ")}
-                      placeholder="VIN*"
+                      placeholder="VIN (optional)"
                       value={newVehicle.vehicle_vin}
                       onChange={(e) => setVehicleField("vehicle_vin", e.target.value)}
                     />

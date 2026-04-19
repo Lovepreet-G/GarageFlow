@@ -146,8 +146,8 @@ const invoiceHtml = ({ invoice, items }) => {
   <div class="totalsWrap">
     <div class="totals">
       <div class="row"><span>Subtotal</span><span><b>$${money(invoice.subtotal_amount)}</b></span></div>
-      <div class="row"><span>HST (7%)</span><span><b>$${money(invoice.hst_amount)}</b></span></div>
-      <div class="row"><span>PST (5%)</span><span><b>$${money(invoice.pst_amount)}</b></span></div>
+      <div class="row"><span>GST (5%)</span><span><b>$${money(invoice.hst_amount)}</b></span></div>
+      <div class="row"><span>PST (7%)</span><span><b>$${money(invoice.pst_amount)}</b></span></div>
       <div class="row grand"><span>Total</span><span>$${money(invoice.total_amount)}</span></div>
     </div>
   </div>

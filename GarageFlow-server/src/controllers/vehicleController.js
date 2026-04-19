@@ -3,9 +3,10 @@ import pool from "../config/db.js"
 export const createVehicle = async (req, res) => {
   const shopId = req.shop.id
   const { customer_id, vehicle_vin, make, model, year, license_plate } = req.body
+  const normalizedVin = String(vehicle_vin || "").trim() || null
 
-  if (!customer_id || !vehicle_vin) {
-    return res.status(400).json({ message: "customer_id and vehicle_vin required" })
+  if (!customer_id) {
+    return res.status(400).json({ message: "customer_id required" })
   }
 
   try {
@@ -19,7 +20,7 @@ export const createVehicle = async (req, res) => {
     const [result] = await pool.query(
       `INSERT INTO vehicles (shop_id, customer_id, vehicle_vin, make, model, year, license_plate)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [shopId, customer_id, vehicle_vin, make || null, model || null, year || null, license_plate || null]
+      [shopId, customer_id, normalizedVin, make || null, model || null, year || null, license_plate || null]
     )
 
     res.status(201).json({ id: result.insertId })

@@ -128,6 +128,7 @@ export default function PayrollEmployeeHistory() {
   const [loading, setLoading] = useState(false)
   const [previewData, setPreviewData] = useState(null)
   const [historyData, setHistoryData] = useState(null)
+  const [downloadingKey, setDownloadingKey] = useState("")
 
   const load = async () => {
     setLoading(true)
@@ -182,6 +183,7 @@ export default function PayrollEmployeeHistory() {
 
   const downloadCurrentPdf = async () => {
     try {
+      setDownloadingKey(`current-${periodType}-${periodStart}`)
       const res = await payrollApi.downloadEmployeePdf(employeeId, { periodType, startDate: periodStart })
       const blob = new Blob([res.data], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
@@ -193,11 +195,14 @@ export default function PayrollEmployeeHistory() {
     } catch (error) {
       console.error(error)
       alert(error?.response?.data?.message || "Failed to download employee payroll PDF")
+    } finally {
+      setDownloadingKey("")
     }
   }
 
   const downloadWeeklyPdf = async (startDate) => {
     try {
+      setDownloadingKey(`weekly-${startDate}`)
       const res = await payrollApi.downloadEmployeePdf(employeeId, { periodType: "weekly", startDate })
       const blob = new Blob([res.data], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
@@ -209,6 +214,8 @@ export default function PayrollEmployeeHistory() {
     } catch (error) {
       console.error(error)
       alert(error?.response?.data?.message || "Failed to download employee payroll PDF")
+    } finally {
+      setDownloadingKey("")
     }
   }
 
@@ -257,8 +264,12 @@ export default function PayrollEmployeeHistory() {
               </button>
             ))}
 
-            <button onClick={downloadCurrentPdf} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
-              Download Current PDF
+            <button
+              onClick={downloadCurrentPdf}
+              disabled={Boolean(downloadingKey)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {downloadingKey === `current-${periodType}-${periodStart}` ? "Downloading..." : "Download Current PDF"}
             </button>
           </div>
         </div>
@@ -354,8 +365,12 @@ export default function PayrollEmployeeHistory() {
                 <div className="mt-1 text-xs text-slate-500">Saved finalized or paid weekly payroll runs for this employee.</div>
               </div>
               {latestWeeklyPeriod ? (
-                <button onClick={() => downloadWeeklyPdf(latestWeeklyPeriod.start_date)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
-                  Download Latest Weekly PDF
+                <button
+                  onClick={() => downloadWeeklyPdf(latestWeeklyPeriod.start_date)}
+                  disabled={Boolean(downloadingKey)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {downloadingKey === `weekly-${latestWeeklyPeriod.start_date}` ? "Downloading..." : "Download Latest Weekly PDF"}
                 </button>
               ) : null}
             </div>
@@ -409,9 +424,10 @@ export default function PayrollEmployeeHistory() {
                           <button
                             type="button"
                             onClick={() => downloadWeeklyPdf(row.start_date)}
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                            disabled={Boolean(downloadingKey)}
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            PDF
+                            {downloadingKey === `weekly-${row.start_date}` ? "Downloading..." : "PDF"}
                           </button>
                         </td>
                       </tr>
