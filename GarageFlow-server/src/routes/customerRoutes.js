@@ -1,5 +1,6 @@
 import express from "express"
 import { requireAuth } from "../middleware/authMiddleware.js"
+import { checkSubscription } from "../middleware/subscriptionMiddleware.js"
 import {
   listCustomers,
   getCustomerById,
@@ -9,6 +10,7 @@ import {
 } from "../controllers/customerController.js"
 const router = express.Router()
 router.use(requireAuth)
+router.use(checkSubscription())
 
 router.get("/", listCustomers)               // GET /api/customers?q=
 router.post("/", createCustomer)             // POST /api/customers

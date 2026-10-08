@@ -28,6 +28,9 @@ export const createVehicle = async (req, res) => {
     if (e.code === "ER_DUP_ENTRY") {
       return res.status(400).json({ message: "Vehicle VIN already exists" })
     }
+    if (e.code === "ER_BAD_NULL_ERROR") {
+      return res.status(400).json({ message: "Database still requires VIN. Make vehicles.vehicle_vin nullable." })
+    }
     console.error(e)
     res.status(500).json({ message: "Server error" })
   }

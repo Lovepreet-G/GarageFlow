@@ -151,3 +151,6 @@ CREATE TABLE IF NOT EXISTS `payroll_audit_logs` (
   INDEX (`payroll_run_id`),
   INDEX (`shop_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE vehicles
+  MODIFY COLUMN vehicle_vin VARCHAR(64) NULL;

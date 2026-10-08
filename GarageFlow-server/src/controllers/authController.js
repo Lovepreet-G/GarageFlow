@@ -6,6 +6,8 @@ import path from "path"
 import { makeResetToken } from "../utils/passwordReset.js"
 import crypto from "crypto"
 import { sendMail } from '../utils/mailer.js'
+import { getStripe } from "../services/stripeService.js"
+import { createInitialTrialSubscription, getSubscriptionSnapshot } from "../services/subscriptionService.js"
 
 export const registerShop = async (req, res) => {
   const { shop_name, shop_address, shop_phone, shop_email, password, tax_id } = req.body
@@ -23,6 +25,14 @@ export const registerShop = async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10)
+    const stripe = getStripe()
+    const stripeCustomer = await stripe.customers.create({
+      name: shop_name,
+      email: shop_email,
+      metadata: {
+        shop_email,
+      },
+    })
 
     const [result] = await pool.query(
       `INSERT INTO shops 
@@ -49,10 +59,19 @@ export const registerShop = async (req, res) => {
       )
     }
 
+    await createInitialTrialSubscription({
+      shopId,
+      stripeCustomerId: stripeCustomer.id,
+    })
+
+    const snapshot = await getSubscriptionSnapshot(shopId)
+
     res.status(201).json({
       message: "Shop registered successfully",
       shopId,
       logo_url: logoUrl,
+      subscription: snapshot.subscription,
+      access: snapshot.access,
     })
   } catch (err) {
     console.error(err)
@@ -85,7 +104,19 @@ export const loginShop = async (req, res) => {
       { expiresIn: '1d' }
     )
 
-    res.json({ token, shop: { id: shop.id, shop_name: shop.shop_name } })
+    const snapshot = await getSubscriptionSnapshot(shop.id)
+
+    res.json({
+      token,
+      shop: {
+        id: shop.id,
+        shop_name: shop.shop_name,
+        shop_email: shop.shop_email,
+        logo_url: shop.logo_url || null,
+        subscription: snapshot.subscription,
+        access: snapshot.access,
+      },
+    })
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

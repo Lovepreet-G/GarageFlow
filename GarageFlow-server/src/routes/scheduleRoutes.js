@@ -1,9 +1,11 @@
 import express from "express"
 import { requireAuth } from "../middleware/authMiddleware.js"
+import { checkSubscription } from "../middleware/subscriptionMiddleware.js"
 import { listSchedules, createSchedule, updateSchedule, deleteSchedule , downloadWeeklySchedulePdf } from "../controllers/scheduleController.js"
 
 const router = express.Router()
 router.use(requireAuth)
+router.use(checkSubscription({ requiredPlan: "pro" }))
 
 router.get("/", listSchedules)
 router.post("/", createSchedule)

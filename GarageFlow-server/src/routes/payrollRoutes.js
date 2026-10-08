@@ -1,5 +1,6 @@
 import express from "express"
 import { requireAuth } from "../middleware/authMiddleware.js"
+import { checkSubscription } from "../middleware/subscriptionMiddleware.js"
 import {
   downloadPayrollPdf,
   downloadEmployeePayrollPdf,
@@ -12,6 +13,7 @@ import {
 
 const router = express.Router()
 router.use(requireAuth)
+router.use(checkSubscription({ requiredPlan: "pro" }))
 
 router.get("/", getPayrollSummary)
 router.get("/employees/:employeeId/history", getEmployeePayrollHistory)
