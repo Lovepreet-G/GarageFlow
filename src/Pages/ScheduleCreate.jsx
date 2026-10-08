@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import scheduleApi from "../api/scheduleApi"
 import employeesApi from "../api/employeesApi"
+import ConfirmModal from "../Components/ConfirmModal"
 import ScheduleGrid from "../Components/ScheduleGrid"
 import ScheduleShiftModal from "../Components/ScheduleShiftModal"
 
@@ -59,6 +61,8 @@ function isPastDate(dateStr) {
 }
 
 export default function ScheduleCreate() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [weekStart, setWeekStart] = useState(formatLocalDate(getMonday(new Date())))
   const [copyWeekStart, setCopyWeekStart] = useState("")
   const [employees, setEmployees] = useState([])
@@ -73,6 +77,10 @@ export default function ScheduleCreate() {
     employee: null,
     date: null,
     existing: null,
+  })
+  const [leavePrompt, setLeavePrompt] = useState({
+    open: false,
+    target: null,
   })
 
   const week = useMemo(() => {
@@ -90,6 +98,7 @@ export default function ScheduleCreate() {
   )
 
   const unsavedCount = useMemo(() => Object.keys(drafts).length, [drafts])
+  const hasUnsavedChanges = unsavedCount > 0
 
   const buildMap = (scheds) => {
     const map = {}
@@ -132,20 +141,96 @@ export default function ScheduleCreate() {
     load()
   }, [weekStart])
 
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined
+
+    const handleDocumentClick = (event) => {
+      if (!hasUnsavedChanges) return
+
+      const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null
+      if (!anchor) return
+
+      const href = anchor.getAttribute("href")
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+        return
+      }
+
+      const url = new URL(href, window.location.origin)
+      const nextPath = `${url.pathname}${url.search}${url.hash}`
+      const currentPath = `${location.pathname}${location.search}${location.hash}`
+
+      if (url.origin !== window.location.origin || nextPath === currentPath) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      setLeavePrompt({
+        open: true,
+        target: { type: "route", value: nextPath },
+      })
+    }
+
+    document.addEventListener("click", handleDocumentClick, true)
+    return () => document.removeEventListener("click", handleDocumentClick, true)
+  }, [hasUnsavedChanges, location.hash, location.pathname, location.search, navigate])
+
+  const requestWeekChange = (nextWeekStart) => {
+    if (!hasUnsavedChanges) {
+      setWeekStart(nextWeekStart)
+      return
+    }
+
+    setLeavePrompt({
+      open: true,
+      target: { type: "week", value: nextWeekStart },
+    })
+  }
+
+  const closeLeavePrompt = () => {
+    setLeavePrompt({ open: false, target: null })
+  }
+
+  const confirmLeavePrompt = () => {
+    const target = leavePrompt.target
+    closeLeavePrompt()
+
+    if (!target) return
+
+    if (target.type === "route") {
+      navigate(target.value)
+      return
+    }
+
+    if (target.type === "week") {
+      setWeekStart(target.value)
+    }
+  }
+
   const goPrevWeek = () => {
     const monday = getMonday(weekStart)
     monday.setDate(monday.getDate() - 7)
-    setWeekStart(formatLocalDate(monday))
+    requestWeekChange(formatLocalDate(monday))
   }
 
   const goNextWeek = () => {
     const monday = getMonday(weekStart)
     monday.setDate(monday.getDate() + 7)
-    setWeekStart(formatLocalDate(monday))
+    requestWeekChange(formatLocalDate(monday))
   }
 
   const handleWeekInput = (value) => {
-    setWeekStart(formatLocalDate(getMonday(value)))
+    requestWeekChange(formatLocalDate(getMonday(value)))
   }
 
   const openCell = (employee, date) => {
@@ -449,6 +534,15 @@ export default function ScheduleCreate() {
         onDelete={deleteShiftLocally}
         readOnly={modal.date ? isPastDate(modal.date) : false}
       />
+
+      {leavePrompt.open ? (
+        <ConfirmModal
+          title="Unsaved schedule changes"
+          message="You have unsaved schedule changes for this week. If you leave now, those edits will be lost."
+          onCancel={closeLeavePrompt}
+          onConfirm={confirmLeavePrompt}
+        />
+      ) : null}
     </div>
   )
 }

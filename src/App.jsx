@@ -5,6 +5,9 @@ import Header from "./Components/Header"
 import Footer from "./Components/Footer"
 import Sidebar from "./Components/Sidebar"
 import ProtectedRoute from "./Components/ProtectedRoute"
+import SubscriptionRoute from "./Components/SubscriptionRoute"
+import SubscriptionBanner from "./Components/SubscriptionBanner"
+import AdminRoute from "./Components/AdminRoute"
 
 import Login from "./Pages/Login"
 import Register from "./Pages/Register"
@@ -27,7 +30,12 @@ import InvoiceView from "./Pages/InvoiceView"
 import Profile from "./Pages/Profile"
 import ResetPassword from "./Pages/ResetPassword"
 import Landing from "./Pages/Landing"
+import About from "./Pages/About"
+import HowItWorks from "./Pages/HowItWorks"
+import Pricing from "./Pages/Pricing"
 import NotFound from "./Pages/NotFound"
+import AdminLogin from "./Pages/AdminLogin"
+import AdminPanel from "./Pages/AdminPanel"
 
 function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -43,6 +51,7 @@ function AppLayout() {
         sidebarOpen={sidebarOpen}
         onMenuClick={() => setSidebarOpen((prev) => !prev)}
       />
+      <SubscriptionBanner />
 
       <div className="min-h-screen bg-slate-50">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -70,6 +79,18 @@ export default function App() {
     <Routes>
       {/* Public (NO layout) */}
       <Route path="/" element={<Landing />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/how-it-works" element={<HowItWorks />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminPanel />
+          </AdminRoute>
+        }
+      />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -120,49 +141,51 @@ export default function App() {
           path="/employees"
           element={
             <ProtectedRoute>
-              <Employees />
+              <SubscriptionRoute requiredPlan="pro">
+                <Employees />
+              </SubscriptionRoute>
             </ProtectedRoute>
           }
         />
         <Route
           path="/employees/new"
-          element={<ProtectedRoute><EmployeesNew /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><EmployeesNew /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/employees/:id"
-          element={<ProtectedRoute><EmployeeProfile /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><EmployeeProfile /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/departments"
-          element={<ProtectedRoute><Departments /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><Departments /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/schedule/create"
-          element={<ProtectedRoute><ScheduleCreate /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><ScheduleCreate /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/schedule"
-          element={<ProtectedRoute><ScheduleView /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><ScheduleView /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/schedule/actual-hours"
-          element={<ProtectedRoute><ScheduleActualHours /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><ScheduleActualHours /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/attendance"
-          element={<ProtectedRoute><Attendance /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><Attendance /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/payroll/dashboard"
-          element={<ProtectedRoute><PayrollDashboard /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><PayrollDashboard /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/payroll"
-          element={<ProtectedRoute><Payroll /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><Payroll /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/payroll/:employeeId"
-          element={<ProtectedRoute><PayrollEmployeeHistory /></ProtectedRoute>}
+          element={<ProtectedRoute><SubscriptionRoute requiredPlan="pro"><PayrollEmployeeHistory /></SubscriptionRoute></ProtectedRoute>}
         />
         <Route
           path="/create-invoice"

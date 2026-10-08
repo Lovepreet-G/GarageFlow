@@ -23,6 +23,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status
+    const code = error?.response?.data?.code
 
     if (status === 401) {
       // clear auth
@@ -33,6 +34,11 @@ api.interceptors.response.use(
       if (window.location.pathname !== "/login") {
         window.location.href = "/login"
       }
+    }
+
+    if ((status === 402 || code === "plan_upgrade_required") && window.location.pathname !== "/pricing") {
+      const target = code === "plan_upgrade_required" ? "/pricing?upgrade=pro" : "/pricing?upgrade=required"
+      window.location.href = target
     }
 
     return Promise.reject(error)

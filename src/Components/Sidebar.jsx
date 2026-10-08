@@ -4,6 +4,14 @@ import { useEffect, useState } from "react"
 function Sidebar({ open, onClose }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const shop = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("shop") || "null")
+    } catch {
+      return null
+    }
+  })()
+  const proAccess = Boolean(shop?.access?.pro_access)
 
   const [openManage, setOpenManage] = useState(false)
   const [openSchedule, setOpenSchedule] = useState(false)
@@ -82,75 +90,92 @@ function Sidebar({ open, onClose }) {
             <span>CUSTOMERS</span>
           </NavLink>
 
+          {proAccess ? (
+            <>
+              <div className="border-t border-slate-100 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenManage((state) => !state)}
+                  className={dropdownBtnClass(manageActive)}
+                >
+                  <span>EMPLOYEE MANAGEMENT</span>
+                  <span className={`ml-auto text-slate-400 transition-transform ${openManage ? "rotate-180" : ""}`}>
+                    ^
+                  </span>
+                </button>
+
+                <div className={["mt-1 space-y-1 overflow-hidden", openManage ? "block" : "hidden"].join(" ")}>
+                  <NavLink to="/employees" end className={linkClass} onClick={handleNavClick}>
+                    <span>Employees</span>
+                  </NavLink>
+
+                  <NavLink to="/employees/new" className={linkClass} onClick={handleNavClick}>
+                    <span>Add Employee</span>
+                  </NavLink>
+
+                  <NavLink to="/departments" className={linkClass} onClick={handleNavClick}>
+                    <span>Departments</span>
+                  </NavLink>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenSchedule((state) => !state)}
+                  className={dropdownBtnClass(scheduleActive)}
+                >
+                  <span>SCHEDULE</span>
+                  <span className={`ml-auto text-slate-400 transition-transform ${openSchedule ? "rotate-180" : ""}`}>
+                    ^
+                  </span>
+                </button>
+
+                <div className={["mt-1 space-y-1 overflow-hidden", openSchedule ? "block" : "hidden"].join(" ")}>
+                  <NavLink to="/schedule/create" className={linkClass} onClick={handleNavClick}>
+                    <span>Create Schedule</span>
+                  </NavLink>
+                  <NavLink to="/schedule" end className={linkClass} onClick={handleNavClick}>
+                    <span>View Schedule</span>
+                  </NavLink>
+                  <NavLink to="/schedule/actual-hours" className={linkClass} onClick={handleNavClick}>
+                    <span>Actual Hours</span>
+                  </NavLink>
+                  <NavLink to="/attendance" className={linkClass} onClick={handleNavClick}>
+                    <span>Attendance</span>
+                  </NavLink>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-2">
+                <div className="space-y-1">
+                  <NavLink to="/payroll/dashboard" className={linkClass} onClick={handleNavClick}>
+                    <span>PAYROLL DASHBOARD</span>
+                  </NavLink>
+                  <NavLink to="/payroll" end className={linkClass} onClick={handleNavClick}>
+                    <span>PAYROLL</span>
+                  </NavLink>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+              <div className="font-semibold text-slate-900">Starter Plan</div>
+              <div className="mt-1">
+                Upgrade to Pro to unlock employee management, scheduling, attendance, and payroll.
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/pricing?upgrade=pro")}
+                className="mt-3 rounded-xl bg-slate-900 px-3 py-2 font-semibold text-white"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+          )}
           <NavLink to="/profile" className={linkClass} onClick={handleNavClick}>
-            <span>PROFILE</span>
+            <span>SHOP PROFILE</span>
           </NavLink>
-
-          <div className="border-t border-slate-100 pt-2">
-            <button
-              type="button"
-              onClick={() => setOpenManage((state) => !state)}
-              className={dropdownBtnClass(manageActive)}
-            >
-              <span>EMPLOYEE MANAGEMENT</span>
-              <span className={`ml-auto text-slate-400 transition-transform ${openManage ? "rotate-180" : ""}`}>
-                ^
-              </span>
-            </button>
-
-            <div className={["mt-1 space-y-1 overflow-hidden", openManage ? "block" : "hidden"].join(" ")}>
-              <NavLink to="/employees" end className={linkClass} onClick={handleNavClick}>
-                <span>Employees</span>
-              </NavLink>
-
-              <NavLink to="/employees/new" className={linkClass} onClick={handleNavClick}>
-                <span>Add Employee</span>
-              </NavLink>
-
-              <NavLink to="/departments" className={linkClass} onClick={handleNavClick}>
-                <span>Departments</span>
-              </NavLink>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setOpenSchedule((state) => !state)}
-              className={dropdownBtnClass(scheduleActive)}
-            >
-              <span>SCHEDULE</span>
-              <span className={`ml-auto text-slate-400 transition-transform ${openSchedule ? "rotate-180" : ""}`}>
-                ^
-              </span>
-            </button>
-
-            <div className={["mt-1 space-y-1 overflow-hidden", openSchedule ? "block" : "hidden"].join(" ")}>
-              <NavLink to="/schedule/create" className={linkClass} onClick={handleNavClick}>
-                <span>Create Schedule</span>
-              </NavLink>
-              <NavLink to="/schedule" end className={linkClass} onClick={handleNavClick}>
-                <span>View Schedule</span>
-              </NavLink>
-              <NavLink to="/schedule/actual-hours" className={linkClass} onClick={handleNavClick}>
-                <span>Actual Hours</span>
-              </NavLink>
-              <NavLink to="/attendance" className={linkClass} onClick={handleNavClick}>
-                <span>Attendance</span>
-              </NavLink>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-2">
-            <div className="space-y-1">
-              <NavLink to="/payroll/dashboard"  className={linkClass} onClick={handleNavClick}>
-                <span>PAYROLL DASHBOARD</span>
-              </NavLink>
-              <NavLink to="/payroll" end className={linkClass} onClick={handleNavClick}>
-                <span>PAYROLL</span>
-              </NavLink>
-            </div>
-          </div>
         </nav>
 
         <button

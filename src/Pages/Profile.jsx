@@ -4,21 +4,24 @@ import { useNavigate } from "react-router-dom"
 
 function Profile() {
   const navigate = useNavigate()
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const shop = useMemo(() => {
+  const [shopData, setShopData] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("shop") || "null")
     } catch {
       return null
     }
-  }, [])
+  })
 
   const API_BASE = import.meta.env.VITE_API_URL || ""
 
-  const currentLogo = shop?.logo_url
-    ? shop.logo_url.startsWith("http")
-      ? shop.logo_url
-      : `${API_BASE}${shop.logo_url}`
+  const currentLogo = shopData?.logo_url
+    ? shopData.logo_url.startsWith("http")
+      ? shopData.logo_url
+      : `${API_BASE}${shopData.logo_url}`
     : null
 
   // ---------------- LOGO ----------------
@@ -71,6 +74,7 @@ function Profile() {
       const current = JSON.parse(localStorage.getItem("shop") || "{}")
       const updated = { ...current, logo_url: newLogoUrl }
       localStorage.setItem("shop", JSON.stringify(updated))
+      setShopData(updated)
 
       setLogoSuccess("Logo updated successfully.")
       setFile(null)
@@ -149,6 +153,12 @@ function Profile() {
     }
   }
 
+  const passwordInputClass = (hasError) =>
+    [
+      "w-full border rounded-2xl px-4 py-3 pr-12 bg-white shadow-sm focus:outline-none focus:ring-2",
+      hasError ? "border-red-300 focus:ring-red-200" : "border-slate-200 focus:ring-slate-200",
+    ].join(" ")
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
       {/* Header (matches your big-title vibe) */}
@@ -165,10 +175,10 @@ function Profile() {
 
         {/* optional space for future actions */}
         <div className="hidden sm:block text-xs text-slate-500">
-          {shop?.shop_name ? (
+          {shopData?.shop_name ? (
             <span className="inline-flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
-              {shop.shop_name}
+              {shopData?.shop_name}
             </span>
           ) : null}
         </div>
@@ -199,7 +209,7 @@ function Profile() {
 
             <div className="flex-1 min-w-0">
               <div className="text-base font-bold italic text-slate-900 truncate">
-                {(shop?.shop_name || "SAMPLE SHOP").toUpperCase()}
+                {(shopData?.shop_name || "SAMPLE SHOP").toUpperCase()}
               </div>
               <div className="mt-1 text-xs text-slate-500">PNG/JPG/WebP, max 2MB</div>
 
@@ -280,18 +290,35 @@ function Profile() {
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Current Password
               </label>
-              <input
-                type="password"
-                value={pw.current_password}
-                onChange={(e) => setPwField("current_password", e.target.value)}
-                className={[
-                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
-                  pwErrors.current_password
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-slate-200 focus:ring-slate-200",
-                ].join(" ")}
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={pw.current_password}
+                  onChange={(e) => setPwField("current_password", e.target.value)}
+                  className={passwordInputClass(pwErrors.current_password)}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                >
+                  {showCurrentPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {pwErrors.current_password ? (
                 <div className="mt-2 text-sm text-red-600">{pwErrors.current_password}</div>
               ) : null}
@@ -301,18 +328,35 @@ function Profile() {
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 New Password
               </label>
-              <input
-                type="password"
-                value={pw.new_password}
-                onChange={(e) => setPwField("new_password", e.target.value)}
-                className={[
-                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
-                  pwErrors.new_password
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-slate-200 focus:ring-slate-200",
-                ].join(" ")}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={pw.new_password}
+                  onChange={(e) => setPwField("new_password", e.target.value)}
+                  className={passwordInputClass(pwErrors.new_password)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label={showNewPassword ? "Hide password" : "Show password"}
+                >
+                  {showNewPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {pwErrors.new_password ? (
                 <div className="mt-2 text-sm text-red-600">{pwErrors.new_password}</div>
               ) : (
@@ -324,18 +368,35 @@ function Profile() {
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Confirm Password
               </label>
-              <input
-                type="password"
-                value={pw.confirm_password}
-                onChange={(e) => setPwField("confirm_password", e.target.value)}
-                className={[
-                  "w-full border rounded-2xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2",
-                  pwErrors.confirm_password
-                    ? "border-red-300 focus:ring-red-200"
-                    : "border-slate-200 focus:ring-slate-200",
-                ].join(" ")}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={pw.confirm_password}
+                  onChange={(e) => setPwField("confirm_password", e.target.value)}
+                  className={passwordInputClass(pwErrors.confirm_password)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {pwErrors.confirm_password ? (
                 <div className="mt-2 text-sm text-red-600">{pwErrors.confirm_password}</div>
               ) : null}

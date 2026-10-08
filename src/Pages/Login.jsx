@@ -13,6 +13,7 @@ function Login() {
   const [form, setForm] = useState({ shop_email: "", password: "" })
   const [errors, setErrors] = useState({ shop_email: "", password: "", general: "" })
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Forgot password modal state
   const [showForgot, setShowForgot] = useState(false)
@@ -52,7 +53,7 @@ function Login() {
 
       localStorage.setItem("token", res.data.token)
       localStorage.setItem("shop", JSON.stringify(res.data.shop))
-      navigate("/dashboard")
+      navigate(res.data.shop?.access?.can_access_app === false ? "/pricing?upgrade=required" : "/dashboard")
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed. Please try again."
 
@@ -264,13 +265,63 @@ function Login() {
                     </span>
 
                     <input
-                      type="password"
-                      className={[inputBase, passBorder].join(" ")}
+                      type={showPassword ? "text" : "password"}
+                      className={[inputBase, passBorder, "pr-12"].join(" ")}
                       value={form.password}
                       onChange={(e) => setField("password", e.target.value)}
                       placeholder="••••••••"
                       autoComplete="current-password"
                     />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <path
+                            d="M3 3l18 18"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <path
+                            d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
 
                   {errors.password ? (

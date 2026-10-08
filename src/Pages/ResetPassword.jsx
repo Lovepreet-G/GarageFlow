@@ -14,6 +14,8 @@ function ResetPassword() {
 
   const [token, setToken] = useState("")
   const [form, setForm] = useState({ new_password: "", confirm_password: "" })
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
 
   const [errors, setErrors] = useState({
@@ -115,17 +117,40 @@ function ResetPassword() {
             <label className="block text-sm font-medium mb-1">
               New Password
             </label>
-            <input
-              type="password"
-              value={form.new_password}
-              onChange={(e) => setField("new_password", e.target.value)}
-              className={`w-full border rounded px-3 py-2 ${
-                errors.new_password ? "border-red-500" : "border-slate-300"
-              }`}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              disabled={!token || loading}
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={form.new_password}
+                onChange={(e) => setField("new_password", e.target.value)}
+                className={`w-full border rounded px-3 py-2 pr-11 ${
+                  errors.new_password ? "border-red-500" : "border-slate-300"
+                }`}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                disabled={!token || loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={showNewPassword ? "Hide password" : "Show password"}
+                disabled={!token || loading}
+              >
+                {showNewPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.new_password ? (
               <div className="mt-1 text-sm text-red-600">
                 {errors.new_password}
@@ -141,17 +166,40 @@ function ResetPassword() {
             <label className="block text-sm font-medium mb-1">
               Confirm Password
             </label>
-            <input
-              type="password"
-              value={form.confirm_password}
-              onChange={(e) => setField("confirm_password", e.target.value)}
-              className={`w-full border rounded px-3 py-2 ${
-                errors.confirm_password ? "border-red-500" : "border-slate-300"
-              }`}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              disabled={!token || loading}
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={form.confirm_password}
+                onChange={(e) => setField("confirm_password", e.target.value)}
+                className={`w-full border rounded px-3 py-2 pr-11 ${
+                  errors.confirm_password ? "border-red-500" : "border-slate-300"
+                }`}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                disabled={!token || loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                disabled={!token || loading}
+              >
+                {showConfirmPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5 0 9.27 3.11 11 7-0.69 1.55-1.79 2.94-3.17 4.05" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6.61 6.62C4.62 7.88 3.1 9.78 2 12c1.73 3.89 6 7 10 7 1.51 0 2.95-.28 4.27-.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.confirm_password && (
               <div className="mt-1 text-sm text-red-600">
                 {errors.confirm_password}
