@@ -4,6 +4,7 @@ import {
   getSubscriptionByShopId,
   getSubscriptionByStripeCustomerId,
   getSubscriptionSnapshot,
+  ensureStripeCustomer,
   updateSubscriptionRow,
 } from "../services/subscriptionService.js"
 import { getPlanFromPriceId, getPriceIdForPlan, getStripe, validatePlan } from "../services/stripeService.js"
@@ -38,9 +39,11 @@ export const createCheckoutSession = async (req, res) => {
     const shop = await getShopById(req.shop.id)
     if (!shop) return res.status(404).json({ message: "Shop not found" })
 
-    const subscription = await getSubscriptionByShopId(req.shop.id)
+    const subscription = await ensureStripeCustomer(req.shop.id)
+    if (!subscription) return res.status(404).json({ message: "Shop not found" })
+
     if (!subscription?.stripe_customer_id) {
-      return res.status(400).json({ message: "Stripe customer is not configured for this shop" })
+      return res.status(500).json({ message: "Stripe customer could not be configured for this shop" })
     }
 
     if (subscription?.is_lifetime) {
@@ -88,15 +91,17 @@ export const createCheckoutSession = async (req, res) => {
 
 export const createCustomerPortalSession = async (req, res) => {
   try {
-    const subscription = await getSubscriptionByShopId(req.shop.id)
+    const subscription = await ensureStripeCustomer(req.shop.id)
+    if (!subscription) return res.status(404).json({ message: "Shop not found" })
+
     if (!subscription?.stripe_customer_id) {
-      return res.status(400).json({ message: "No Stripe customer was found for this shop" })
+      return res.status(500).json({ message: "Stripe customer could not be configured for this shop" })
     }
 
     const stripe = getStripe()
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
-      return_url: `${getBaseUrl()}/pricing`,
+      return_url: `${getBaseUrl()}/profile`,
     })
 
     res.json({ url: session.url })

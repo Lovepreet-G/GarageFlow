@@ -1,4 +1,5 @@
 import pool from "../config/db.js"
+import { getStripe } from "./stripeService.js"
 
 function toIso(value) {
   if (!value) return null
@@ -31,15 +32,49 @@ export async function createInitialTrialSubscription({ shopId, stripeCustomerId 
      VALUES
       (?, ?, NULL, 'pro', 'trialing', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY))
      ON DUPLICATE KEY UPDATE
-      stripe_customer_id = VALUES(stripe_customer_id),
-      plan = VALUES(plan),
-      status = VALUES(status),
-      trial_start = VALUES(trial_start),
-      trial_end = VALUES(trial_end),
-      current_period_end = VALUES(current_period_end),
-      updated_at = CURRENT_TIMESTAMP`,
+      stripe_customer_id = COALESCE(stripe_customer_id, VALUES(stripe_customer_id))`,
     [shopId, stripeCustomerId]
   )
+}
+
+export async function ensureStripeCustomer(shopId) {
+  const shop = await getShopById(shopId)
+  if (!shop) return null
+
+  const subscription = await getSubscriptionByShopId(shopId)
+  if (subscription?.stripe_customer_id) return subscription
+
+  const stripe = getStripe()
+  const { data: matchingCustomers } = await stripe.customers.list({
+    email: shop.shop_email,
+    limit: 100,
+  })
+  const customer =
+    matchingCustomers.find(
+      (candidate) =>
+        candidate.metadata?.shop_id === String(shop.id) ||
+        candidate.metadata?.shop_email?.toLowerCase() === shop.shop_email.toLowerCase()
+    ) ||
+    (await stripe.customers.create(
+      {
+        name: shop.shop_name,
+        email: shop.shop_email,
+        metadata: { shop_id: String(shop.id) },
+      },
+      { idempotencyKey: `garageflow-shop-customer-${shop.id}` }
+    ))
+
+  await pool.query(
+    `INSERT INTO subscriptions
+      (shop_id, stripe_customer_id, plan, status)
+     VALUES (?, ?, 'pro', 'incomplete')
+     ON DUPLICATE KEY UPDATE
+      stripe_customer_id = COALESCE(stripe_customer_id, VALUES(stripe_customer_id)),
+      updated_at = CURRENT_TIMESTAMP`,
+    [shop.id, customer.id]
+  )
+
+  return getSubscriptionByShopId(shop.id)
 }
 
 export async function getSubscriptionByShopId(shopId) {

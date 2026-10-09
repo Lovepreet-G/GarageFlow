@@ -109,6 +109,48 @@ export default function Pricing() {
   const upgradeState = params.get("upgrade")
   const checkoutState = params.get("checkout")
 
+  useEffect(() => {
+    if (!token || checkoutState !== "success") return
+
+    let active = true
+    let attempt = 0
+    let timeout
+
+    const refreshSubscription = async () => {
+      try {
+        const { data } = await subscriptionApi.getStatus()
+        const currentShop = readShop() || {}
+        const updated = {
+          ...currentShop,
+          subscription: data.subscription,
+          access: data.access,
+        }
+        localStorage.setItem("shop", JSON.stringify(updated))
+        if (active) setShop(updated)
+
+        const synchronized =
+          data.access?.can_access_app &&
+          (data.subscription?.stripe_subscription_id ||
+            data.subscription?.is_lifetime ||
+            data.subscription?.is_overridden)
+        if (synchronized) return
+      } catch (error) {
+        console.error(error)
+      }
+
+      attempt += 1
+      if (active && attempt < 12) {
+        timeout = window.setTimeout(refreshSubscription, 2500)
+      }
+    }
+
+    timeout = window.setTimeout(refreshSubscription, 1500)
+    return () => {
+      active = false
+      window.clearTimeout(timeout)
+    }
+  }, [checkoutState, token])
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -177,7 +219,7 @@ export default function Pricing() {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={openBillingPortal}
-                  disabled={loadingPortal || !subscription?.stripe_customer_id}
+                  disabled={loadingPortal || !subscription?.stripe_subscription_id}
                   className="rounded-2xl border bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loadingPortal ? "Opening..." : "Manage Billing"}
@@ -189,6 +231,11 @@ export default function Pricing() {
                   Back to Dashboard
                 </button>
               </div>
+              {!subscription?.stripe_subscription_id && !subscription?.is_lifetime ? (
+                <div className="mt-3 text-xs text-slate-500">
+                  Choose a plan below to activate billing and start your trial.
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}

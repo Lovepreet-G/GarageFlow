@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import api from "../api"
 import { useNavigate } from "react-router-dom"
+import subscriptionApi from "../api/subscriptionApi"
 
 function Profile() {
   const navigate = useNavigate()
@@ -15,6 +16,46 @@ function Profile() {
       return null
     }
   })
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [taxId, setTaxId] = useState("")
+  const [taxIdInput, setTaxIdInput] = useState("")
+  const [savingTaxId, setSavingTaxId] = useState(false)
+  const [taxIdError, setTaxIdError] = useState("")
+  const [taxIdSuccess, setTaxIdSuccess] = useState("")
+  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingError, setBillingError] = useState("")
+
+  useEffect(() => {
+    let active = true
+
+    const loadProfile = async () => {
+      try {
+        const { data } = await api.get("/shops/me")
+        if (!active) return
+
+        const updatedShop = {
+          ...(shopData || {}),
+          ...data.shop,
+          subscription: data.subscription,
+          access: data.access,
+        }
+        localStorage.setItem("shop", JSON.stringify(updatedShop))
+        setShopData(updatedShop)
+        const savedTaxId = String(data.shop.tax_id || "").trim()
+        setTaxId(savedTaxId)
+        setTaxIdInput(savedTaxId)
+      } catch (error) {
+        if (active) setTaxIdError(error.response?.data?.message || "Failed to load shop profile.")
+      } finally {
+        if (active) setProfileLoading(false)
+      }
+    }
+
+    loadProfile()
+    return () => {
+      active = false
+    }
+  }, [])
 
   const API_BASE = import.meta.env.VITE_API_URL || ""
 
@@ -23,6 +64,40 @@ function Profile() {
       ? shopData.logo_url
       : `${API_BASE}${shopData.logo_url}`
     : null
+
+  const saveTaxId = async (event) => {
+    event.preventDefault()
+    setTaxIdError("")
+    setTaxIdSuccess("")
+    setSavingTaxId(true)
+
+    try {
+      const { data } = await api.patch("/shops/me/tax-id", { tax_id: taxIdInput })
+      setTaxId(data.tax_id)
+      setTaxIdInput(data.tax_id)
+      setTaxIdSuccess(data.message)
+      const updatedShop = { ...(shopData || {}), tax_id: data.tax_id }
+      localStorage.setItem("shop", JSON.stringify(updatedShop))
+      setShopData(updatedShop)
+    } catch (error) {
+      setTaxIdError(error.response?.data?.message || "Failed to save tax ID.")
+    } finally {
+      setSavingTaxId(false)
+    }
+  }
+
+  const openBillingPortal = async () => {
+    setBillingError("")
+    setBillingLoading(true)
+
+    try {
+      const { data } = await subscriptionApi.createPortalSession()
+      window.location.href = data.url
+    } catch (error) {
+      setBillingError(error.response?.data?.message || "Failed to open subscription management.")
+      setBillingLoading(false)
+    }
+  }
 
   // ---------------- LOGO ----------------
   const [file, setFile] = useState(null)
@@ -182,6 +257,121 @@ function Profile() {
             </span>
           ) : null}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+          <div className="text-sm font-extrabold italic tracking-tight text-slate-900">
+            SUBSCRIPTION
+          </div>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+            Plan and billing management
+          </p>
+
+          {profileLoading ? (
+            <p className="mt-5 text-sm text-slate-500">Loading subscription...</p>
+          ) : (
+            <>
+              <div className="mt-5 space-y-2 text-sm text-slate-600">
+                <p>
+                  Plan:{" "}
+                  <strong className="text-slate-900">
+                    {shopData?.subscription?.effective_plan || shopData?.subscription?.plan || "No plan"}
+                  </strong>
+                </p>
+                <p>
+                  Status:{" "}
+                  <strong className="text-slate-900">
+                    {shopData?.subscription?.is_lifetime
+                      ? "Lifetime access"
+                      : shopData?.subscription?.status || "Not started"}
+                  </strong>
+                </p>
+                {shopData?.subscription?.trial_end ? (
+                  <p>
+                    Trial ends:{" "}
+                    <strong className="text-slate-900">
+                      {new Date(shopData.subscription.trial_end).toLocaleDateString()}
+                    </strong>
+                  </p>
+                ) : null}
+                {shopData?.subscription?.current_period_end ? (
+                  <p>
+                    Current period ends:{" "}
+                    <strong className="text-slate-900">
+                      {new Date(shopData.subscription.current_period_end).toLocaleDateString()}
+                    </strong>
+                  </p>
+                ) : null}
+              </div>
+
+              {billingError ? (
+                <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{billingError}</p>
+              ) : null}
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                {!shopData?.subscription?.is_lifetime && shopData?.subscription?.stripe_subscription_id ? (
+                  <button
+                    type="button"
+                    onClick={openBillingPortal}
+                    disabled={billingLoading}
+                    className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {billingLoading ? "Opening..." : "Manage subscription"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => navigate("/pricing")}
+                  className="rounded-2xl border px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {shopData?.subscription?.stripe_subscription_id ? "View plans" : "Choose a plan"}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
+          <div className="text-sm font-extrabold italic tracking-tight text-slate-900">
+            BUSINESS TAX ID
+          </div>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+            Printed on your invoices
+          </p>
+
+          <form className="mt-5" onSubmit={saveTaxId}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Tax ID number
+            </label>
+            <input
+              type="text"
+              value={taxId ? taxId : taxIdInput}
+              onChange={(event) => setTaxIdInput(event.target.value)}
+              readOnly={Boolean(taxId)}
+              disabled={profileLoading || Boolean(taxId)}
+              maxLength={64}
+              placeholder="Enter your business tax ID"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm disabled:text-slate-600"
+            />
+            {taxId ? (
+              <p className="mt-2 text-xs text-slate-500">This tax ID is saved and can no longer be changed.</p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">Once saved, this value becomes read-only.</p>
+            )}
+            {taxIdError ? <p className="mt-3 text-sm text-red-700">{taxIdError}</p> : null}
+            {taxIdSuccess ? <p className="mt-3 text-sm text-green-700">{taxIdSuccess}</p> : null}
+            {!taxId ? (
+              <button
+                type="submit"
+                disabled={profileLoading || savingTaxId || !taxIdInput.trim()}
+                className="mt-4 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingTaxId ? "Saving..." : "Save tax ID"}
+              </button>
+            ) : null}
+          </form>
+        </section>
       </div>
 
       {/* Responsive two-column layout (stacks on mobile) */}
